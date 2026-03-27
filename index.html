@@ -48,7 +48,7 @@
 <body>
     <header class="header">
         <div class="header-content">
-            <div class="logo">🚗 智驾新程 - 车辆预约系统</div>
+            <div class="logo">智驾新程 - 车辆预约系统</div>
             <nav class="nav-links">
                 <a href="index.html" class="active">预约申请</a>
                 <a href="user.html">我的预约</a>
@@ -59,7 +59,7 @@
     </header>
     <main class="container">
         <div class="form-card">
-            <h1 class="form-title">📝 车辆Demo预约申请</h1>
+            <h1 class="form-title">Astra Demo预约申请</h1>
             <form id="bookingForm">
                 <div class="form-group"><label class="form-label">预约日期 <span class="required">*</span></label><div class="date-tabs" id="dateTabs"></div><input type="hidden" id="bookingDate" required></div>
                 <div class="form-group"><label class="form-label">预约时段 <span class="required">*</span></label><div class="radio-group" id="timeSlots"></div><input type="hidden" id="timeSlot" required></div>
@@ -84,13 +84,42 @@
             DEMO_ROUTES: [{ value: "线路1-顺义市区40mins内", label: "线路1-顺义市区40mins内" }, { value: "线路2-望京市区1h30mins内", label: "线路2-望京市区1h30mins内" }, { value: "自由泛化", label: "自由泛化" }],
             PARKING_OPTIONS: [{ value: "有", label: "有" }, { value: "无", label: "无" }],
             LANGUAGES: [{ value: "中文", label: "中文" }, { value: "英文", label: "英文" }],
-            VEHICLE_COUNT: 11
+            VEHICLE_COUNT: 8,  // 6辆主车辆 + 2辆备选车
+            MAIN_VEHICLE_COUNT: 6  // 主车辆数量
         };
         function generateDateList() { const dates = []; const start = new Date(CONFIG.DATE_RANGE.start); const end = new Date(CONFIG.DATE_RANGE.end); while (start <= end) { const date = new Date(start); const weekDay = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][date.getDay()]; dates.push({ value: date.toISOString().split("T")[0], label: (date.getMonth() + 1) + "/" + date.getDate() + " " + weekDay }); start.setDate(start.getDate() + 1); } return dates; }
         function showToast(message, type) { const toast = document.createElement("div"); toast.className = "toast toast-" + type; toast.textContent = message; document.body.appendChild(toast); setTimeout(() => toast.remove(), 3000); }
         function setLoading(btn, loading) { if (loading) { btn.disabled = true; btn.dataset.orig = btn.textContent; btn.innerHTML = '<span class="spinner" style="margin-right:0.5rem;"></span>提交中...'; } else { btn.disabled = false; btn.textContent = btn.dataset.orig || "提交预约申请"; } }
-        function initDateTabs() { const c = document.getElementById("dateTabs"); c.innerHTML = generateDateList().map(d => '<button type="button" class="date-tab" data-value="' + d.value + '">' + d.label + '</button>').join(""); c.querySelectorAll(".date-tab").forEach(t => t.addEventListener("click", () => { c.querySelectorAll(".date-tab").forEach(x => x.classList.remove("active")); t.classList.add("active"); document.getElementById("bookingDate").value = t.dataset.value; })); }
-        function initRadio(cid, opts, hid) { const c = document.getElementById(cid); c.innerHTML = opts.map(o => '<label class="radio-item" data-value="' + o.value + '"><input type="radio" value="' + o.value + '"><span>' + o.label + '</span></label>').join(""); c.querySelectorAll(".radio-item").forEach(i => i.addEventListener("click", () => { c.querySelectorAll(".radio-item").forEach(x => x.classList.remove("selected")); i.classList.add("selected"); i.querySelector("input").checked = true; document.getElementById(hid).value = i.dataset.value; })); }
+        function initDateTabs() {
+            const c = document.getElementById("dateTabs");
+            c.innerHTML = generateDateList().map(d => '<button type="button" class="date-tab" data-value="' + d.value + '">' + d.label + '</button>').join("");
+            c.querySelectorAll(".date-tab").forEach(t => t.addEventListener("click", () => {
+                const isActive = t.classList.contains("active");
+                c.querySelectorAll(".date-tab").forEach(x => x.classList.remove("active"));
+                if (!isActive) {
+                    t.classList.add("active");
+                    document.getElementById("bookingDate").value = t.dataset.value;
+                } else {
+                    document.getElementById("bookingDate").value = "";
+                }
+            }));
+        }
+        function initRadio(cid, opts, hid) {
+            const c = document.getElementById(cid);
+            c.innerHTML = opts.map(o => '<label class="radio-item" data-value="' + o.value + '"><input type="radio" value="' + o.value + '"><span>' + o.label + '</span></label>').join("");
+            c.querySelectorAll(".radio-item").forEach(i => i.addEventListener("click", () => {
+                const isSelected = i.classList.contains("selected");
+                c.querySelectorAll(".radio-item").forEach(x => x.classList.remove("selected"));
+                if (!isSelected) {
+                    i.classList.add("selected");
+                    i.querySelector("input").checked = true;
+                    document.getElementById(hid).value = i.dataset.value;
+                } else {
+                    i.querySelector("input").checked = false;
+                    document.getElementById(hid).value = "";
+                }
+            }));
+        }
 
         // JSONP请求函数
         let jsonpCounter = 0;
