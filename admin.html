@@ -135,6 +135,27 @@
         function formatDateTime(d) { if (!d) return "-"; const date = new Date(d); return (date.getMonth() + 1) + "/" + date.getDate() + " " + date.getHours().toString().padStart(2, "0") + ":" + date.getMinutes().toString().padStart(2, "0"); }
         function formatDate(d) { if (!d) return "-"; const date = new Date(d); return (date.getMonth() + 1) + "/" + date.getDate(); }
         function getStatusText(s) { return { pending: "待审批", approved: "已通过", rejected: "已拒绝", cancelled: "已取消" }[s] || s; }
+
+        // JSONP请求函数
+        let jsonpCounter = 0;
+        function jsonpRequest(params, callback) {
+            const callbackName = 'jsonp_callback_' + (++jsonpCounter);
+            window[callbackName] = function(response) {
+                callback(response);
+                delete window[callbackName];
+                document.body.removeChild(script);
+            };
+            const query = Object.keys(params).map(k => encodeURIComponent(k) + '=' + encodeURIComponent(typeof params[k] === 'object' ? JSON.stringify(params[k]) : params[k])).join('&');
+            const script = document.createElement('script');
+            script.src = CONFIG.API_URL + '?callback=' + callbackName + '&' + query;
+            script.onerror = function() {
+                callback({ success: false, message: '网络请求失败' });
+                delete window[callbackName];
+                document.body.removeChild(script);
+            };
+            document.body.appendChild(script);
+        }
+
         document.getElementById("loginForm").addEventListener("submit", e => {
             e.preventDefault();
             if (document.getElementById("adminPassword").value === CONFIG.ADMIN_PASSWORD) {
@@ -150,14 +171,13 @@
             document.getElementById("logoutBtn").classList.add("hidden");
             document.getElementById("adminPassword").value = "";
         });
-        async function loadBookings() {
+        function loadBookings() {
             document.getElementById("loadingOverlay").classList.remove("hidden");
-            try {
-                const res = await fetch(CONFIG.API_URL + "?action=getAllBookings");
-                const r = await res.json();
+            jsonpRequest({ action: "getAllBookings" }, function(r) {
+                document.getElementById("loadingOverlay").classList.add("hidden");
                 if (r.success) { allBookings = r.data; updateStats(); renderTable(); }
-            } catch (err) { console.error(err); showToast("加载数据失败", "error"); }
-            finally { document.getElementById("loadingOverlay").classList.add("hidden"); }
+                else showToast("加载数据失败", "error");
+            });
         }
         function updateStats() {
             document.getElementById("totalCount").textContent = allBookings.length;
@@ -184,15 +204,13 @@
         document.getElementById("closeModal").addEventListener("click", () => document.getElementById("approvalModal").classList.add("hidden"));
         document.getElementById("approveBtn").addEventListener("click", () => processApproval(document.getElementById("approveBookingId").value, "approved", ""));
         document.getElementById("rejectBtn").addEventListener("click", () => { const reason = document.getElementById("rejectReason").value.trim(); if (!reason) { showToast("请输入拒绝原因", "error"); return; } processApproval(document.getElementById("approveBookingId").value, "rejected", reason); });
-        async function processApproval(id, status, reason) {
+        function processApproval(id, status, reason) {
             document.getElementById("loadingOverlay").classList.remove("hidden");
-            try {
-                const res = await fetch(CONFIG.API_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "approveBooking", bookingId: id, status: status, rejectReason: reason }) });
-                const r = await res.json();
+            jsonpRequest({ action: "approveBooking", bookingId: id, status: status, rejectReason: reason }, function(r) {
+                document.getElementById("loadingOverlay").classList.add("hidden");
                 if (r.success) { showToast(status === "approved" ? "审批通过，已自动排班" : "已拒绝", "success"); document.getElementById("approvalModal").classList.add("hidden"); loadBookings(); }
                 else showToast(r.message || "操作失败", "error");
-            } catch (err) { showToast("网络错误", "error"); }
-            finally { document.getElementById("loadingOverlay").classList.add("hidden"); }
+            });
         }
         document.getElementById("approvalModal").addEventListener("click", e => { if (e.target.id === "approvalModal") document.getElementById("approvalModal").classList.add("hidden"); });
     </script>

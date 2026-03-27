@@ -106,18 +106,38 @@
         let allBookings = [];
         function generateDateList() { const dates = []; const start = new Date(CONFIG.DATE_RANGE.start); const end = new Date(CONFIG.DATE_RANGE.end); while (start <= end) { const date = new Date(start); const weekDay = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][date.getDay()]; dates.push({ value: date.toISOString().split("T")[0], label: (date.getMonth() + 1) + "/" + date.getDate(), weekDay: weekDay }); start.setDate(start.getDate() + 1); } return dates; }
         function showToast(msg) { const t = document.createElement("div"); t.className = "toast toast-error"; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3000); }
-        async function loadSchedule() {
+
+        // JSONP请求函数
+        let jsonpCounter = 0;
+        function jsonpRequest(params, callback) {
+            const callbackName = 'jsonp_callback_' + (++jsonpCounter);
+            window[callbackName] = function(response) {
+                callback(response);
+                delete window[callbackName];
+                document.body.removeChild(script);
+            };
+            const query = Object.keys(params).map(k => encodeURIComponent(k) + '=' + encodeURIComponent(typeof params[k] === 'object' ? JSON.stringify(params[k]) : params[k])).join('&');
+            const script = document.createElement('script');
+            script.src = CONFIG.API_URL + '?callback=' + callbackName + '&' + query;
+            script.onerror = function() {
+                callback({ success: false, message: '网络请求失败' });
+                delete window[callbackName];
+                document.body.removeChild(script);
+            };
+            document.body.appendChild(script);
+        }
+
+        function loadSchedule() {
             const loading = document.getElementById("scheduleLoading");
             const table = document.getElementById("scheduleTable");
             loading.style.display = "flex";
             table.style.display = "none";
-            try {
-                const res = await fetch(CONFIG.API_URL + "?action=getSchedule&start=" + CONFIG.DATE_RANGE.start + "&end=" + CONFIG.DATE_RANGE.end);
-                const r = await res.json();
+            jsonpRequest({ action: "getSchedule", start: CONFIG.DATE_RANGE.start, end: CONFIG.DATE_RANGE.end }, function(r) {
+                loading.style.display = "none";
+                table.style.display = "table";
                 if (r.success) { allBookings = r.data; renderScheduleTable(); updateStats(); }
                 else { allBookings = []; renderScheduleTable(); updateStats(); }
-            } catch (err) { console.error(err); allBookings = []; renderScheduleTable(); updateStats(); showToast("暂无法获取数据，请检查API配置"); }
-            finally { loading.style.display = "none"; table.style.display = "table"; }
+            });
         }
         function renderScheduleTable() {
             const dates = generateDateList();

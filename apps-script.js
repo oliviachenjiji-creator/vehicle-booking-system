@@ -73,10 +73,11 @@ let tokenExpireTime = 0;
 // ========== 主入口 - 处理所有请求 ==========
 
 /**
- * GET请求处理
+ * GET请求处理 - 支持JSONP绕过CORS
  */
 function doGet(e) {
   const action = e.parameter.action;
+  const callback = e.parameter.callback; // JSONP回调函数名
 
   let result;
 
@@ -94,15 +95,34 @@ function doGet(e) {
       case 'getAllBookings':
         result = getAllBookings();
         break;
+      // 新增：通过GET支持的操作（解决CORS问题）
+      case 'createBooking':
+        result = createBooking(JSON.parse(e.parameter.data));
+        break;
+      case 'cancelBooking':
+        result = cancelBooking(e.parameter.bookingId);
+        break;
+      case 'approveBooking':
+        result = approveBooking(e.parameter.bookingId, e.parameter.status, e.parameter.rejectReason || '');
+        break;
       default:
-        result = { success: false, message: '未知操作' };
+        result = { success: false, message: '未知操作: ' + action };
     }
   } catch (error) {
     result = { success: false, message: error.toString() };
   }
 
-  return ContentService.createTextOutput(JSON.stringify(result))
-    .setMimeType(ContentService.MimeType.JSON);
+  // 返回JSONP格式或普通JSON
+  const output = ContentService.createTextOutput();
+  output.setMimeType(ContentService.MimeType.JAVASCRIPT);
+
+  if (callback) {
+    output.setContent(callback + '(' + JSON.stringify(result) + ')');
+  } else {
+    output.setContent(JSON.stringify(result));
+  }
+
+  return output;
 }
 
 /**

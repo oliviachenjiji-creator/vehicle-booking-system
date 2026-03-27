@@ -82,30 +82,47 @@
         function showToast(msg, type) { const t = document.createElement("div"); t.className = "toast toast-" + type; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3000); }
         function formatDate(d) { const date = new Date(d); return (date.getMonth() + 1) + "月" + date.getDate() + "日 " + ["周日","周一","周二","周三","周四","周五","周六"][date.getDay()]; }
         function getStatusText(s) { return { pending: "待审批", approved: "已通过", rejected: "已拒绝", cancelled: "已取消" }[s] || s; }
-        async function searchBookings() {
+
+        // JSONP请求函数
+        let jsonpCounter = 0;
+        function jsonpRequest(params, callback) {
+            const callbackName = 'jsonp_callback_' + (++jsonpCounter);
+            window[callbackName] = function(response) {
+                callback(response);
+                delete window[callbackName];
+                document.body.removeChild(script);
+            };
+            const query = Object.keys(params).map(k => encodeURIComponent(k) + '=' + encodeURIComponent(typeof params[k] === 'object' ? JSON.stringify(params[k]) : params[k])).join('&');
+            const script = document.createElement('script');
+            script.src = CONFIG.API_URL + '?callback=' + callbackName + '&' + query;
+            script.onerror = function() {
+                callback({ success: false, message: '网络请求失败' });
+                delete window[callbackName];
+                document.body.removeChild(script);
+            };
+            document.body.appendChild(script);
+        }
+
+        function searchBookings() {
             const phone = document.getElementById("phoneInput").value.trim();
             if (!phone || !/^\d{11}$/.test(phone)) { showToast("请输入正确的手机号码", "error"); return; }
             const list = document.getElementById("bookingList");
             list.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-            try {
-                const res = await fetch(CONFIG.API_URL + "?action=getUserBookings&phone=" + phone);
-                const r = await res.json();
+            jsonpRequest({ action: "getUserBookings", phone: phone }, function(r) {
                 if (r.success && r.data.length > 0) renderBookingList(r.data);
                 else list.innerHTML = '<div class="empty-state"><p>未找到预约记录</p><p style="font-size:0.875rem;margin-top:0.5rem;">请确认手机号是否正确</p></div>';
-            } catch (err) { list.innerHTML = '<p style="text-align:center;color:var(--danger);">查询失败，请稍后重试</p>'; }
+            });
         }
         function renderBookingList(bookings) {
             const c = document.getElementById("bookingList");
             c.innerHTML = bookings.map(b => '<div class="booking-card"><div class="booking-header"><span class="booking-company">' + b.companyName + '</span><span class="booking-status status-' + b.status + '">' + getStatusText(b.status) + '</span></div><div class="booking-details"><div><strong>日期:</strong> ' + formatDate(b.bookingDate) + '</div><div><strong>时段:</strong> ' + b.timeSlot + '</div><div><strong>线路:</strong> ' + b.demoRoute + '</div><div><strong>人数:</strong> ' + b.passengerCount + '人</div><div><strong>语言:</strong> ' + b.vehicleLanguage + '</div><div><strong>车辆:</strong> ' + (b.vehicleId || "待分配") + '</div>' + (b.remarks ? '<div><strong>备注:</strong> ' + b.remarks + '</div>' : '') + (b.rejectReason ? '<div style="color:var(--danger);"><strong>拒绝原因:</strong> ' + b.rejectReason + '</div>' : '') + '</div>' + (b.status === "pending" ? '<div class="booking-actions"><button class="btn btn-outline btn-sm" onclick="cancelBooking(\'' + b.id + '\')">取消预约</button></div>' : '') + '</div>').join("");
         }
-        async function cancelBooking(id) {
+        function cancelBooking(id) {
             if (!confirm("确定要取消此预约吗？")) return;
-            try {
-                const res = await fetch(CONFIG.API_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "cancelBooking", bookingId: id }) });
-                const r = await res.json();
+            jsonpRequest({ action: "cancelBooking", bookingId: id }, function(r) {
                 if (r.success) { showToast("已取消预约", "success"); searchBookings(); }
                 else showToast(r.message || "取消失败", "error");
-            } catch (err) { showToast("网络错误", "error"); }
+            });
         }
         document.addEventListener("DOMContentLoaded", () => {
             document.getElementById("searchBtn").addEventListener("click", searchBookings);

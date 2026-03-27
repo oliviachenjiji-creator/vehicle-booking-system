@@ -88,6 +88,27 @@
         function setLoading(btn, loading) { if (loading) { btn.disabled = true; btn.dataset.orig = btn.textContent; btn.innerHTML = '<span class="spinner" style="margin-right:0.5rem;"></span>提交中...'; } else { btn.disabled = false; btn.textContent = btn.dataset.orig || "提交预约申请"; } }
         function initDateTabs() { const c = document.getElementById("dateTabs"); c.innerHTML = generateDateList().map(d => '<button type="button" class="date-tab" data-value="' + d.value + '">' + d.label + '</button>').join(""); c.querySelectorAll(".date-tab").forEach(t => t.addEventListener("click", () => { c.querySelectorAll(".date-tab").forEach(x => x.classList.remove("active")); t.classList.add("active"); document.getElementById("bookingDate").value = t.dataset.value; })); }
         function initRadio(cid, opts, hid) { const c = document.getElementById(cid); c.innerHTML = opts.map(o => '<label class="radio-item" data-value="' + o.value + '"><input type="radio" value="' + o.value + '"><span>' + o.label + '</span></label>').join(""); c.querySelectorAll(".radio-item").forEach(i => i.addEventListener("click", () => { c.querySelectorAll(".radio-item").forEach(x => x.classList.remove("selected")); i.classList.add("selected"); i.querySelector("input").checked = true; document.getElementById(hid).value = i.dataset.value; })); }
+
+        // JSONP请求函数
+        let jsonpCounter = 0;
+        function jsonpRequest(params, callback) {
+            const callbackName = 'jsonp_callback_' + (++jsonpCounter);
+            window[callbackName] = function(response) {
+                callback(response);
+                delete window[callbackName];
+                document.body.removeChild(script);
+            };
+            const query = Object.keys(params).map(k => encodeURIComponent(k) + '=' + encodeURIComponent(typeof params[k] === 'object' ? JSON.stringify(params[k]) : params[k])).join('&');
+            const script = document.createElement('script');
+            script.src = CONFIG.API_URL + '?callback=' + callbackName + '&' + query;
+            script.onerror = function() {
+                callback({ success: false, message: '网络请求失败' });
+                delete window[callbackName];
+                document.body.removeChild(script);
+            };
+            document.body.appendChild(script);
+        }
+
         async function handleSubmit(e) {
             e.preventDefault();
             const btn = document.getElementById("submitBtn");
@@ -96,13 +117,17 @@
             for (const [f, l] of Object.entries(req)) if (!fd[f]) { showToast("请选择" + l, "error"); return; }
             if (!/^\d{11}$/.test(fd.contactPhone)) { showToast("请输入正确的手机号码", "error"); return; }
             setLoading(btn, true);
-            try {
-                const res = await fetch(CONFIG.API_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "createBooking", data: fd }) });
-                const r = await res.json();
-                if (r.success) { showToast("预约申请已提交，请等待审批", "success"); document.getElementById("bookingForm").reset(); document.querySelectorAll(".radio-item").forEach(i => i.classList.remove("selected")); document.querySelectorAll(".date-tab").forEach(t => t.classList.remove("active")); }
-                else showToast(r.message || "提交失败", "error");
-            } catch (err) { console.error(err); showToast("网络错误，请稍后重试", "error"); }
-            finally { setLoading(btn, false); }
+            jsonpRequest({ action: "createBooking", data: fd }, function(r) {
+                setLoading(btn, false);
+                if (r.success) {
+                    showToast("预约申请已提交，请等待审批", "success");
+                    document.getElementById("bookingForm").reset();
+                    document.querySelectorAll(".radio-item").forEach(i => i.classList.remove("selected"));
+                    document.querySelectorAll(".date-tab").forEach(t => t.classList.remove("active"));
+                } else {
+                    showToast(r.message || "提交失败", "error");
+                }
+            });
         }
         document.addEventListener("DOMContentLoaded", () => { initDateTabs(); initRadio("timeSlots", CONFIG.TIME_SLOTS, "timeSlot"); initRadio("routeOptions", CONFIG.DEMO_ROUTES, "demoRoute"); initRadio("languageOptions", CONFIG.LANGUAGES, "vehicleLanguage"); document.getElementById("bookingForm").addEventListener("submit", handleSubmit); });
     </script>
