@@ -78,7 +78,7 @@
         </div>
     </main>
     <script>
-        const CONFIG = { API_URL: "YOUR_GOOGLE_APPS_SCRIPT_URL" };
+        const CONFIG = { API_URL: "https://script.google.com/macros/s/AKfycbyyLi44_nTE5AlDf4hfOAileeMoIyn-Jyz7aDf5UjsRMM8nA71b9XiSFDqXgZ9uIF46/exec" };
         function showToast(msg, type) { const t = document.createElement("div"); t.className = "toast toast-" + type; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3000); }
         function formatDate(d) { const date = new Date(d); return (date.getMonth() + 1) + "月" + date.getDate() + "日 " + ["周日","周一","周二","周三","周四","周五","周六"][date.getDay()]; }
         function getStatusText(s) { return { pending: "待审批", approved: "已通过", rejected: "已拒绝", cancelled: "已取消" }[s] || s; }
