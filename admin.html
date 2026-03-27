@@ -19,12 +19,13 @@
         .login-title { font-size: 1.5rem; font-weight: 600; margin-bottom: 1.5rem; text-align: center; }
         .form-group { margin-bottom: 1.25rem; }
         .form-label { display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--gray-700); }
-        .form-input { width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--gray-300); border-radius: 0.5rem; font-size: 1rem; }
-        .form-input:focus { outline: none; border-color: var(--primary); }
+        .form-input, .form-select { width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--gray-300); border-radius: 0.5rem; font-size: 1rem; }
+        .form-input:focus, .form-select:focus { outline: none; border-color: var(--primary); }
         .btn { display: inline-flex; align-items: center; justify-content: center; padding: 0.75rem 1.5rem; border: none; border-radius: 0.5rem; font-size: 1rem; font-weight: 500; cursor: pointer; }
         .btn-primary { background: var(--primary); color: white; }
         .btn-success { background: var(--success); color: white; }
         .btn-danger { background: var(--danger); color: white; }
+        .btn-warning { background: var(--warning); color: white; }
         .btn-outline { background: white; border: 1px solid var(--gray-300); color: var(--gray-700); }
         .btn-sm { padding: 0.5rem 1rem; font-size: 0.875rem; }
         .btn-full { width: 100%; }
@@ -55,6 +56,7 @@
         .toast { position: fixed; top: 1rem; right: 1rem; padding: 1rem 1.5rem; border-radius: 0.5rem; color: white; font-weight: 500; z-index: 1000; animation: slideIn 0.3s ease; }
         .toast-success { background: var(--success); }
         .toast-error { background: var(--danger); }
+        .toast-warning { background: var(--warning); }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
         .modal-content { background: white; border-radius: 1rem; padding: 1.5rem; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; }
@@ -65,6 +67,7 @@
         .spinner { width: 1.5rem; height: 1.5rem; border: 3px solid var(--gray-200); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; z-index: 999; }
+        .action-btns { display: flex; gap: 0.25rem; flex-wrap: wrap; }
     </style>
 </head>
 <body>
@@ -107,7 +110,7 @@
                 </div>
             </div>
             <div class="table-container">
-                <table><thead><tr><th>提交时间</th><th>预约日期</th><th>时段</th><th>线路</th><th>客户公司</th><th>人数</th><th>对接人</th><th>电话</th><th>车辆</th><th>状态</th><th>操作</th></tr></thead><tbody id="bookingTableBody"></tbody></table>
+                <table><thead><tr><th>提交时间</th><th>预约日期</th><th>时段</th><th>线路</th><th>泊车</th><th>公司</th><th>人数</th><th>对接人</th><th>电话</th><th>车辆</th><th>状态</th><th>操作</th></tr></thead><tbody id="bookingTableBody"></tbody></table>
             </div>
         </div>
     </main>
@@ -120,14 +123,27 @@
             <div style="display:flex;gap:0.5rem;margin-top:1rem;"><button class="btn btn-success" id="approveBtn" style="flex:1;">✓ 通过</button><button class="btn btn-danger" id="rejectBtn" style="flex:1;">✗ 拒绝</button></div>
         </div>
     </div>
+    <div class="modal-overlay hidden" id="vehicleModal">
+        <div class="modal-content">
+            <div class="modal-header"><h3 class="modal-title">调整车辆排班</h3><button class="modal-close" id="closeVehicleModal">&times;</button></div>
+            <div id="vehicleBookingDetail"></div>
+            <input type="hidden" id="vehicleBookingId">
+            <div class="form-group" style="margin-top:1rem;">
+                <label class="form-label">选择车辆</label>
+                <select class="form-select" id="vehicleSelect"></select>
+            </div>
+            <div id="conflictWarning" class="hidden" style="background:#fef3c7;color:#92400e;padding:0.75rem;border-radius:0.5rem;margin-top:0.75rem;font-size:0.875rem;"></div>
+            <button class="btn btn-primary btn-full" id="saveVehicleBtn" style="margin-top:1rem;">保存</button>
+        </div>
+    </div>
     <div class="loading-overlay hidden" id="loadingOverlay"><div class="spinner"></div></div>
     <script>
         const CONFIG = {
             API_URL: "https://script.google.com/macros/s/AKfycbyyLi44_nTE5AlDf4hfOAileeMoIyn-Jyz7aDf5UjsRMM8nA71b9XiSFDqXgZ9uIF46/exec",
             ADMIN_PASSWORD: "admin123",
-            DATE_RANGE: { start: "2026-04-23", end: "2026-04-30" },
+            DATE_RANGE: { start: "2026-04-24", end: "2026-04-30" },
             TIME_SLOTS: ["10:00-12:00", "14:00-16:00", "17:00-19:00"],
-            VEHICLE_COUNT: 3
+            VEHICLE_COUNT: 11
         };
         let allBookings = [];
         let currentFilter = "all";
@@ -188,17 +204,26 @@
         function renderTable() {
             const filtered = currentFilter === "all" ? allBookings : allBookings.filter(b => b.status === currentFilter);
             const tbody = document.getElementById("bookingTableBody");
-            if (filtered.length === 0) { tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:2rem;color:var(--gray-500);">暂无数据</td></tr>'; return; }
-            tbody.innerHTML = filtered.map(b => "<tr><td>" + formatDateTime(b.createdAt) + "</td><td>" + formatDate(b.bookingDate) + "</td><td>" + b.timeSlot + "</td><td>" + b.demoRoute + "</td><td>" + b.companyName + "</td><td>" + b.passengerCount + "人</td><td>" + b.contactName + "</td><td>" + b.contactPhone + "</td><td>" + (b.vehicleId || "-") + "</td><td><span class='status-badge status-" + b.status + "'>" + getStatusText(b.status) + "</span></td><td>" + (b.status === "pending" ? "<button class='btn btn-success btn-sm' onclick='openApprovalModal(\"" + b.id + "\",\"approve\")'>通过</button> <button class='btn btn-danger btn-sm' onclick='openApprovalModal(\"" + b.id + "\",\"reject\")'>拒绝</button>" : "-") + "</td></tr>").join("");
+            if (filtered.length === 0) { tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:2rem;color:var(--gray-500);">暂无数据</td></tr>'; return; }
+            tbody.innerHTML = filtered.map(b => {
+                let actionBtns = "";
+                if (b.status === "pending") {
+                    actionBtns = "<div class='action-btns'><button class='btn btn-success btn-sm' onclick='openApprovalModal(\"" + b.id + "\",\"approve\")'>通过</button> <button class='btn btn-danger btn-sm' onclick='openApprovalModal(\"" + b.id + "\",\"reject\")'>拒绝</button></div>";
+                } else if (b.status === "approved") {
+                    actionBtns = "<div class='action-btns'><button class='btn btn-outline btn-sm' onclick='openVehicleModal(\"" + b.id + "\")'>调车</button> <button class='btn btn-warning btn-sm' onclick='withdrawBooking(\"" + b.id + "\")'>撤回</button></div>";
+                }
+                return "<tr><td>" + formatDateTime(b.createdAt) + "</td><td>" + formatDate(b.bookingDate) + "</td><td>" + b.timeSlot + "</td><td>" + (b.demoRoute || "-") + "</td><td>" + (b.parkingDemo || "-") + "</td><td>" + b.companyName + "</td><td>" + b.passengerCount + "人</td><td>" + b.contactName + "</td><td>" + b.contactPhone + "</td><td>" + (b.vehicleId || "-") + "</td><td><span class='status-badge status-" + b.status + "'>" + getStatusText(b.status) + "</span></td><td>" + actionBtns + "</td></tr>";
+            }).join("");
         }
         document.querySelectorAll(".filter-btn").forEach(btn => btn.addEventListener("click", () => { document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active")); btn.classList.add("active"); currentFilter = btn.dataset.filter; renderTable(); }));
+
         function openApprovalModal(id, action) {
             const b = allBookings.find(x => x.id === id);
             if (!b) return;
             document.getElementById("approveBookingId").value = id;
             document.getElementById("rejectReasonGroup").classList.toggle("hidden", action !== "reject");
             document.getElementById("rejectReason").value = "";
-            document.getElementById("bookingDetail").innerHTML = "<div style='display:grid;gap:0.5rem;margin-bottom:1.5rem;'><div><strong>日期:</strong> " + formatDate(b.bookingDate) + "</div><div><strong>时段:</strong> " + b.timeSlot + "</div><div><strong>线路:</strong> " + b.demoRoute + "</div><div><strong>公司:</strong> " + b.companyName + "</div><div><strong>人数:</strong> " + b.passengerCount + "人</div><div><strong>对接人:</strong> " + b.contactName + " (" + b.contactPhone + ")</div>" + (b.remarks ? "<div><strong>备注:</strong> " + b.remarks + "</div>" : "") + "</div>";
+            document.getElementById("bookingDetail").innerHTML = "<div style='display:grid;gap:0.5rem;margin-bottom:1.5rem;'><div><strong>日期:</strong> " + formatDate(b.bookingDate) + "</div><div><strong>时段:</strong> " + b.timeSlot + "</div><div><strong>行车线路:</strong> " + (b.demoRoute || "-") + "</div><div><strong>泊车体验:</strong> " + (b.parkingDemo || "-") + "</div><div><strong>公司:</strong> " + b.companyName + "</div><div><strong>人数:</strong> " + b.passengerCount + "人</div><div><strong>对接人:</strong> " + b.contactName + " (" + b.contactPhone + ")</div>" + (b.remarks ? "<div><strong>备注:</strong> " + b.remarks + "</div>" : "") + "</div>";
             document.getElementById("approvalModal").classList.remove("hidden");
         }
         document.getElementById("closeModal").addEventListener("click", () => document.getElementById("approvalModal").classList.add("hidden"));
@@ -212,7 +237,90 @@
                 else showToast(r.message || "操作失败", "error");
             });
         }
+
+        // 撤回审批
+        function withdrawBooking(id) {
+            if (!confirm("确定要撤回此预约的审批吗？撤回后状态将变为待审批。")) return;
+            document.getElementById("loadingOverlay").classList.remove("hidden");
+            jsonpRequest({ action: "withdrawBooking", bookingId: id }, function(r) {
+                document.getElementById("loadingOverlay").classList.add("hidden");
+                if (r.success) { showToast("已撤回审批", "success"); loadBookings(); }
+                else showToast(r.message || "撤回失败", "error");
+            });
+        }
+
+        // 调整车辆
+        function openVehicleModal(id) {
+            const b = allBookings.find(x => x.id === id);
+            if (!b) return;
+            document.getElementById("vehicleBookingId").value = id;
+            document.getElementById("vehicleBookingDetail").innerHTML = "<div style='display:grid;gap:0.5rem;margin-bottom:1rem;'><div><strong>预约ID:</strong> " + b.id + "</div><div><strong>日期:</strong> " + formatDate(b.bookingDate) + "</div><div><strong>时段:</strong> " + b.timeSlot + "</div><div><strong>当前车辆:</strong> " + (b.vehicleId || "未分配") + "</div></div>";
+
+            // 生成车辆选项
+            let options = "<option value=''>-- 选择车辆 --</option>";
+            for (let i = 1; i <= CONFIG.VEHICLE_COUNT; i++) {
+                options += "<option value='车辆" + i + "'" + (b.vehicleId === "车辆" + i ? " selected" : "") + ">车辆" + i + "</option>";
+            }
+            document.getElementById("vehicleSelect").innerHTML = options;
+            document.getElementById("conflictWarning").classList.add("hidden");
+            document.getElementById("vehicleModal").classList.remove("hidden");
+        }
+        document.getElementById("closeVehicleModal").addEventListener("click", () => document.getElementById("vehicleModal").classList.add("hidden"));
+
+        // 检查冲突
+        document.getElementById("vehicleSelect").addEventListener("change", function() {
+            const b = allBookings.find(x => x.id === document.getElementById("vehicleBookingId").value);
+            const newVehicle = this.value;
+            if (!newVehicle || !b) { document.getElementById("conflictWarning").classList.add("hidden"); return; }
+
+            // 标准化日期
+            let bookingDateStr = b.bookingDate;
+            if (b.bookingDate instanceof Date) {
+                bookingDateStr = b.bookingDate.toISOString().split('T')[0];
+            } else if (typeof b.bookingDate === 'string' && b.bookingDate.includes('T')) {
+                bookingDateStr = b.bookingDate.split('T')[0];
+            }
+
+            // 查找同日期同时段同车辆的已审批预约
+            const conflict = allBookings.find(x => {
+                if (x.id === b.id || x.status !== "approved" || x.vehicleId !== newVehicle) return false;
+                let xDateStr = x.bookingDate;
+                if (x.bookingDate instanceof Date) {
+                    xDateStr = x.bookingDate.toISOString().split('T')[0];
+                } else if (typeof x.bookingDate === 'string' && x.bookingDate.includes('T')) {
+                    xDateStr = x.bookingDate.split('T')[0];
+                }
+                return xDateStr === bookingDateStr && x.timeSlot === b.timeSlot;
+            });
+
+            if (conflict) {
+                document.getElementById("conflictWarning").innerHTML = "⚠️ 冲突警告：该时段" + newVehicle + "已被 " + conflict.companyName + " 预约！";
+                document.getElementById("conflictWarning").classList.remove("hidden");
+            } else {
+                document.getElementById("conflictWarning").classList.add("hidden");
+            }
+        });
+
+        document.getElementById("saveVehicleBtn").addEventListener("click", function() {
+            const id = document.getElementById("vehicleBookingId").value;
+            const vehicle = document.getElementById("vehicleSelect").value;
+            if (!vehicle) { showToast("请选择车辆", "error"); return; }
+
+            const conflictWarning = document.getElementById("conflictWarning");
+            if (!conflictWarning.classList.contains("hidden")) {
+                if (!confirm("该车辆在此时段已有预约，确定要继续调整吗？")) return;
+            }
+
+            document.getElementById("loadingOverlay").classList.remove("hidden");
+            jsonpRequest({ action: "updateVehicle", bookingId: id, vehicleId: vehicle }, function(r) {
+                document.getElementById("loadingOverlay").classList.add("hidden");
+                if (r.success) { showToast("车辆已调整", "success"); document.getElementById("vehicleModal").classList.add("hidden"); loadBookings(); }
+                else showToast(r.message || "调整失败", "error");
+            });
+        });
+
         document.getElementById("approvalModal").addEventListener("click", e => { if (e.target.id === "approvalModal") document.getElementById("approvalModal").classList.add("hidden"); });
+        document.getElementById("vehicleModal").addEventListener("click", e => { if (e.target.id === "vehicleModal") document.getElementById("vehicleModal").classList.add("hidden"); });
     </script>
 </body>
 </html>

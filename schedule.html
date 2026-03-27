@@ -101,7 +101,7 @@
             API_URL: "https://script.google.com/macros/s/AKfycbyyLi44_nTE5AlDf4hfOAileeMoIyn-Jyz7aDf5UjsRMM8nA71b9XiSFDqXgZ9uIF46/exec",
             DATE_RANGE: { start: "2026-04-24", end: "2026-04-30" },
             TIME_SLOTS: [{ value: "10:00-12:00", label: "10:00-12:00" }, { value: "14:00-16:00", label: "14:00-16:00" }, { value: "17:00-19:00", label: "17:00-19:00" }],
-            VEHICLE_COUNT: 3
+            VEHICLE_COUNT: 11
         };
         let allBookings = [];
         function generateDateList() { const dates = []; const start = new Date(CONFIG.DATE_RANGE.start); const end = new Date(CONFIG.DATE_RANGE.end); while (start <= end) { const date = new Date(start); const weekDay = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][date.getDay()]; dates.push({ value: date.toISOString().split("T")[0], label: (date.getMonth() + 1) + "/" + date.getDate(), weekDay: weekDay }); start.setDate(start.getDate() + 1); } return dates; }
@@ -172,7 +172,7 @@
                         items.forEach(s => {
                             const cls = s.booking.status === "approved" ? "slot-item-approved" : "slot-item-pending";
                             const txt = s.booking.status === "approved" ? "已确认" : "待审批";
-                            html += "<div class='slot-item " + cls + "'><div style='font-weight:600;'>车辆" + s.vehicle + " · " + txt + "</div><div>" + s.booking.companyName + "</div></div>";
+                            html += "<div class='slot-item " + cls + "'><div style='font-weight:600;'>车辆" + s.vehicle + " · " + txt + "</div><div>" + s.booking.contactName + "，" + s.booking.passengerCount + "人，" + s.booking.companyName + "</div></div>";
                         });
                         const avail = CONFIG.VEHICLE_COUNT - items.length;
                         if (avail > 0) html += "<div class='slot-item' style='background:rgba(16,185,129,0.15);color:#065f46;'><div style='font-size:0.7rem;'>还有" + avail + "辆车可预约</div></div>";

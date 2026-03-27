@@ -57,7 +57,7 @@ const CONFIG = {
   },
 
   // 车辆数量
-  VEHICLE_COUNT: 3,
+  VEHICLE_COUNT: 11,
 
   // 预约日期范围
   DATE_RANGE: {
@@ -104,6 +104,12 @@ function doGet(e) {
         break;
       case 'approveBooking':
         result = approveBooking(e.parameter.bookingId, e.parameter.status, e.parameter.rejectReason || '');
+        break;
+      case 'withdrawBooking':
+        result = withdrawBooking(e.parameter.bookingId);
+        break;
+      case 'updateVehicle':
+        result = updateVehicle(e.parameter.bookingId, e.parameter.vehicleId);
         break;
       default:
         result = { success: false, message: '未知操作: ' + action };
@@ -420,7 +426,7 @@ function getBookingSheet() {
     const headers = [
       'ID', '创建时间', '预约日期', '时段', 'Demo线路',
       '客户公司名称', '上车人数', '车辆语言', '对接人姓名',
-      '对接人电话', '备注', '状态', '车辆ID', '拒绝原因', '更新时间', '飞书记录ID'
+      '对接人电话', '备注', '状态', '车辆ID', '拒绝原因', '更新时间', '飞书记录ID', '泊车Demo体验'
     ];
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
     sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
@@ -467,7 +473,8 @@ function getAllBookings() {
         vehicleId: row[12],
         rejectReason: row[13],
         updatedAt: row[14],
-        feishuRecordId: row[15]
+        feishuRecordId: row[15],
+        parkingDemo: row[16] || '无'
       });
     }
   }
@@ -482,7 +489,7 @@ function createBooking(bookingData) {
   const sheet = getBookingSheet();
 
   // 验证必填字段
-  const requiredFields = ['bookingDate', 'timeSlot', 'demoRoute', 'companyName',
+  const requiredFields = ['bookingDate', 'timeSlot', 'demoRoute', 'parkingDemo', 'companyName',
                           'passengerCount', 'vehicleLanguage', 'contactName', 'contactPhone'];
   for (const field of requiredFields) {
     if (!bookingData[field]) {
@@ -511,12 +518,12 @@ function createBooking(bookingData) {
 
   const now = new Date();
 
-  // 写入Google Sheets
+  // 写入Google Sheets (包含parkingDemo字段)
   const newRow = [
     id, now, bookingData.bookingDate, bookingData.timeSlot, bookingData.demoRoute,
     bookingData.companyName, bookingData.passengerCount, bookingData.vehicleLanguage,
     bookingData.contactName, bookingData.contactPhone, bookingData.remarks || '',
-    'pending', '', '', now, ''
+    'pending', '', '', now, '', bookingData.parkingDemo || '无'
   ];
 
   sheet.appendRow(newRow);
@@ -571,7 +578,15 @@ function checkTimeSlotCapacity(date, timeSlot) {
  */
 function getUserBookings(phone) {
   const result = getAllBookings();
-  const bookings = result.data.filter(b => b.contactPhone === phone);
+  // 标准化手机号格式进行比较
+  const normalizedPhone = String(phone).trim();
+  const bookings = result.data.filter(b => {
+    const bookingPhone = String(b.contactPhone || '').trim();
+    // 支持多种格式匹配：纯数字、带+86前缀等
+    return bookingPhone === normalizedPhone ||
+           bookingPhone === '+86' + normalizedPhone ||
+           bookingPhone.replace('+86', '') === normalizedPhone;
+  });
 
   return {
     success: true,
@@ -815,6 +830,74 @@ function getSchedule(startDate, endDate) {
   return { success: true, data: bookings };
 }
 
+/**
+ * 撤回审批 - 将已审批的预约恢复为待审批状态
+ */
+function withdrawBooking(bookingId) {
+  const sheet = getBookingSheet();
+  const data = sheet.getDataRange().getValues();
+
+  let rowIndex = -1;
+  let currentBooking = null;
+
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === bookingId) {
+      rowIndex = i + 1;
+      currentBooking = {
+        status: data[i][11],
+        vehicleId: data[i][12]
+      };
+      break;
+    }
+  }
+
+  if (rowIndex === -1) {
+    return { success: false, message: '预约不存在' };
+  }
+
+  if (currentBooking.status !== 'approved') {
+    return { success: false, message: '只能撤回已通过的预约' };
+  }
+
+  const now = new Date();
+
+  // 恢复为待审批状态，清空车辆分配
+  sheet.getRange(rowIndex, 12).setValue('pending');
+  sheet.getRange(rowIndex, 13).setValue('');
+  sheet.getRange(rowIndex, 15).setValue(now);
+
+  return { success: true, message: '已撤回审批' };
+}
+
+/**
+ * 手动更新车辆分配
+ */
+function updateVehicle(bookingId, vehicleId) {
+  const sheet = getBookingSheet();
+  const data = sheet.getDataRange().getValues();
+
+  let rowIndex = -1;
+
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === bookingId) {
+      rowIndex = i + 1;
+      break;
+    }
+  }
+
+  if (rowIndex === -1) {
+    return { success: false, message: '预约不存在' };
+  }
+
+  const now = new Date();
+
+  // 更新车辆
+  sheet.getRange(rowIndex, 13).setValue(vehicleId);
+  sheet.getRange(rowIndex, 15).setValue(now);
+
+  return { success: true, message: '车辆已更新', vehicleId: vehicleId };
+}
+
 // ========== 初始化脚本 ==========
 
 /**
@@ -830,7 +913,7 @@ function initializeSheets() {
     const headers = [
       'ID', '创建时间', '预约日期', '时段', 'Demo线路',
       '客户公司名称', '上车人数', '车辆语言', '对接人姓名',
-      '对接人电话', '备注', '状态', '车辆ID', '拒绝原因', '更新时间', '飞书记录ID'
+      '对接人电话', '备注', '状态', '车辆ID', '拒绝原因', '更新时间', '飞书记录ID', '泊车Demo体验'
     ];
     bookingSheet.getRange(1, 1, 1, headers.length).setValues([headers]);
     bookingSheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#f3f4f6');

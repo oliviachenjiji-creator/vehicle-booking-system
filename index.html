@@ -63,7 +63,8 @@
             <form id="bookingForm">
                 <div class="form-group"><label class="form-label">预约日期 <span class="required">*</span></label><div class="date-tabs" id="dateTabs"></div><input type="hidden" id="bookingDate" required></div>
                 <div class="form-group"><label class="form-label">预约时段 <span class="required">*</span></label><div class="radio-group" id="timeSlots"></div><input type="hidden" id="timeSlot" required></div>
-                <div class="form-group"><label class="form-label">Demo线路 <span class="required">*</span></label><div class="radio-group" id="routeOptions"></div><input type="hidden" id="demoRoute" required></div>
+                <div class="form-group"><label class="form-label">行车Demo线路 <span class="required">*</span></label><div class="radio-group" id="routeOptions"></div><input type="hidden" id="demoRoute" required></div>
+                <div class="form-group"><label class="form-label">泊车Demo体验 <span class="required">*</span></label><div class="radio-group" id="parkingOptions"></div><input type="hidden" id="parkingDemo" required></div>
                 <div class="form-group"><label class="form-label">客户公司名称 <span class="required">*</span></label><input type="text" class="form-input" id="companyName" required placeholder="请输入公司名称"></div>
                 <div class="form-group"><label class="form-label">上车人数 <span class="required">*</span></label><input type="number" class="form-input" id="passengerCount" min="1" max="3" required placeholder="请输入人数"><p class="form-hint">车辆资源限制，建议每个客户不超过3人，即提供1台车</p></div>
                 <div class="form-group"><label class="form-label">车辆语言 <span class="required">*</span></label><div class="radio-group" id="languageOptions"></div><p class="form-hint">HMI界面和导航语言支持中文+英文，默认中文</p><input type="hidden" id="vehicleLanguage" required></div>
@@ -81,7 +82,9 @@
             DATE_RANGE: { start: "2026-04-24", end: "2026-04-30" },
             TIME_SLOTS: [{ value: "10:00-12:00", label: "10:00 - 12:00" }, { value: "14:00-16:00", label: "14:00 - 16:00" }, { value: "17:00-19:00", label: "17:00 - 19:00" }],
             DEMO_ROUTES: [{ value: "线路1-顺义市区40mins内", label: "线路1-顺义市区40mins内" }, { value: "线路2-望京市区1h30mins内", label: "线路2-望京市区1h30mins内" }, { value: "自由泛化", label: "自由泛化" }],
-            LANGUAGES: [{ value: "中文", label: "中文" }, { value: "英文", label: "英文" }]
+            PARKING_OPTIONS: [{ value: "有", label: "有" }, { value: "无", label: "无" }],
+            LANGUAGES: [{ value: "中文", label: "中文" }, { value: "英文", label: "英文" }],
+            VEHICLE_COUNT: 11
         };
         function generateDateList() { const dates = []; const start = new Date(CONFIG.DATE_RANGE.start); const end = new Date(CONFIG.DATE_RANGE.end); while (start <= end) { const date = new Date(start); const weekDay = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][date.getDay()]; dates.push({ value: date.toISOString().split("T")[0], label: (date.getMonth() + 1) + "/" + date.getDate() + " " + weekDay }); start.setDate(start.getDate() + 1); } return dates; }
         function showToast(message, type) { const toast = document.createElement("div"); toast.className = "toast toast-" + type; toast.textContent = message; document.body.appendChild(toast); setTimeout(() => toast.remove(), 3000); }
@@ -112,8 +115,8 @@
         async function handleSubmit(e) {
             e.preventDefault();
             const btn = document.getElementById("submitBtn");
-            const fd = { bookingDate: document.getElementById("bookingDate").value, timeSlot: document.getElementById("timeSlot").value, demoRoute: document.getElementById("demoRoute").value, companyName: document.getElementById("companyName").value.trim(), passengerCount: document.getElementById("passengerCount").value, vehicleLanguage: document.getElementById("vehicleLanguage").value, contactName: document.getElementById("contactName").value.trim(), contactPhone: document.getElementById("contactPhone").value.trim(), remarks: document.getElementById("remarks").value.trim() };
-            const req = { bookingDate: "预约日期", timeSlot: "预约时段", demoRoute: "Demo线路", companyName: "客户公司名称", passengerCount: "上车人数", vehicleLanguage: "车辆语言", contactName: "客户对接人", contactPhone: "对接人电话" };
+            const fd = { bookingDate: document.getElementById("bookingDate").value, timeSlot: document.getElementById("timeSlot").value, demoRoute: document.getElementById("demoRoute").value, parkingDemo: document.getElementById("parkingDemo").value, companyName: document.getElementById("companyName").value.trim(), passengerCount: document.getElementById("passengerCount").value, vehicleLanguage: document.getElementById("vehicleLanguage").value, contactName: document.getElementById("contactName").value.trim(), contactPhone: document.getElementById("contactPhone").value.trim(), remarks: document.getElementById("remarks").value.trim() };
+            const req = { bookingDate: "预约日期", timeSlot: "预约时段", demoRoute: "行车Demo线路", parkingDemo: "泊车Demo体验", companyName: "客户公司名称", passengerCount: "上车人数", vehicleLanguage: "车辆语言", contactName: "客户对接人", contactPhone: "对接人电话" };
             for (const [f, l] of Object.entries(req)) if (!fd[f]) { showToast("请选择" + l, "error"); return; }
             const passengerCount = parseInt(fd.passengerCount);
             if (isNaN(passengerCount) || passengerCount < 1 || passengerCount > 3) { showToast("上车人数请输入1-3之间的整数", "error"); return; }
@@ -131,7 +134,7 @@
                 }
             });
         }
-        document.addEventListener("DOMContentLoaded", () => { initDateTabs(); initRadio("timeSlots", CONFIG.TIME_SLOTS, "timeSlot"); initRadio("routeOptions", CONFIG.DEMO_ROUTES, "demoRoute"); initRadio("languageOptions", CONFIG.LANGUAGES, "vehicleLanguage"); document.getElementById("bookingForm").addEventListener("submit", handleSubmit); });
+        document.addEventListener("DOMContentLoaded", () => { initDateTabs(); initRadio("timeSlots", CONFIG.TIME_SLOTS, "timeSlot"); initRadio("routeOptions", CONFIG.DEMO_ROUTES, "demoRoute"); initRadio("parkingOptions", CONFIG.PARKING_OPTIONS, "parkingDemo"); initRadio("languageOptions", CONFIG.LANGUAGES, "vehicleLanguage"); document.getElementById("bookingForm").addEventListener("submit", handleSubmit); });
     </script>
 </body>
 </html>
