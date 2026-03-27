@@ -144,7 +144,17 @@
             const timeFilter = document.getElementById("timeFilter").value;
             const slots = timeFilter === "all" ? CONFIG.TIME_SLOTS : CONFIG.TIME_SLOTS.filter(s => s.value === timeFilter);
             const map = {};
-            allBookings.forEach(b => { map[b.bookingDate + "_" + b.timeSlot + "_" + b.vehicleId] = b; });
+            // 标准化日期格式进行匹配
+            allBookings.forEach(b => {
+                // 将日期标准化为 yyyy-MM-dd 格式
+                let dateStr = b.bookingDate;
+                if (b.bookingDate instanceof Date) {
+                    dateStr = b.bookingDate.toISOString().split('T')[0];
+                } else if (typeof b.bookingDate === 'string' && b.bookingDate.includes('T')) {
+                    dateStr = b.bookingDate.split('T')[0];
+                }
+                map[dateStr + "_" + b.timeSlot + "_" + b.vehicleId] = b;
+            });
             document.getElementById("scheduleHead").innerHTML = "<tr><th>时段</th>" + dates.map(d => "<th>" + d.label + "<br><span style='font-weight:normal;font-size:0.75rem;color:var(--gray-500);'>" + d.weekDay + "</span></th>").join("") + "</tr>";
             let body = "";
             slots.forEach(slot => {

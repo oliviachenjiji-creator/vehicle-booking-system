@@ -445,10 +445,16 @@ function getAllBookings() {
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
     if (row[0]) {
+      // 标准化日期格式
+      let bookingDate = row[2];
+      if (bookingDate instanceof Date) {
+        bookingDate = Utilities.formatDate(bookingDate, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+      }
+
       bookings.push({
         id: row[0],
         createdAt: row[1],
-        bookingDate: row[2],
+        bookingDate: bookingDate,
         timeSlot: row[3],
         demoRoute: row[4],
         companyName: row[5],
@@ -758,12 +764,28 @@ function approveBooking(bookingId, status, rejectReason) {
  * 自动排班：分配车辆
  */
 function assignVehicle(date, timeSlot) {
+  // 标准化日期格式
+  let targetDate;
+  if (date instanceof Date) {
+    targetDate = Utilities.formatDate(date, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  } else {
+    targetDate = String(date).split('T')[0]; // 处理 ISO 格式
+  }
+
   const result = getAllBookings();
   const bookings = result.data;
 
   const occupiedVehicles = new Set();
   bookings.forEach(b => {
-    if (b.bookingDate === date &&
+    // 标准化预约日期
+    let bookingDateStr;
+    if (b.bookingDate instanceof Date) {
+      bookingDateStr = Utilities.formatDate(b.bookingDate, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+    } else {
+      bookingDateStr = String(b.bookingDate).split('T')[0];
+    }
+
+    if (bookingDateStr === targetDate &&
         b.timeSlot === timeSlot &&
         b.status === 'approved' &&
         b.vehicleId) {
