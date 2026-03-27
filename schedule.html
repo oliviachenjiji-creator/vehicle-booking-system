@@ -16,7 +16,7 @@
         .nav-links a:hover, .nav-links a.active { background: var(--gray-100); color: var(--primary); }
         .container { max-width: 1400px; margin: 0 auto; padding: 1.5rem; }
         .page-header { margin-bottom: 1.5rem; }
-        .page-title { font-size: 1.5rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
+        .page-title { font-size: 1.5rem; font-weight: 600; }
         .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
         .stat-card { background: white; border-radius: 0.75rem; padding: 1rem; box-shadow: var(--shadow); text-align: center; }
         .stat-value { font-size: 1.5rem; font-weight: 700; color: var(--gray-800); }
@@ -100,8 +100,46 @@
             MAIN_VEHICLE_COUNT: 6
         };
         let allBookings = [];
-        function generateDateList() { const dates = []; const start = new Date(CONFIG.DATE_RANGE.start); const end = new Date(CONFIG.DATE_RANGE.end); while (start <= end) { const date = new Date(start); const weekDay = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][date.getDay()]; dates.push({ value: date.toISOString().split("T")[0], label: (date.getMonth() + 1) + "/" + date.getDate(), weekDay: weekDay }); start.setDate(start.getDate() + 1); } return dates; }
-        function showToast(msg) { const t = document.createElement("div"); t.className = "toast toast-error"; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3000); }
+
+        function generateDateList() {
+            const dates = [];
+            const start = new Date(CONFIG.DATE_RANGE.start);
+            const end = new Date(CONFIG.DATE_RANGE.end);
+            while (start <= end) {
+                const date = new Date(start);
+                const weekDay = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][date.getDay()];
+                dates.push({ value: date.toISOString().split("T")[0], label: (date.getMonth() + 1) + "/" + date.getDate(), weekDay: weekDay });
+                start.setDate(start.getDate() + 1);
+            }
+            return dates;
+        }
+
+        function showToast(msg) {
+            const t = document.createElement("div");
+            t.className = "toast toast-error";
+            t.textContent = msg;
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+
+        // 标准化日期格式
+        function normalizeDate(dateVal) {
+            if (!dateVal) return "";
+            if (dateVal instanceof Date) {
+                return dateVal.toISOString().split('T')[0];
+            }
+            if (typeof dateVal === 'string') {
+                // 处理各种日期格式
+                if (dateVal.includes('T')) {
+                    return dateVal.split('T')[0];
+                }
+                // 已经是 yyyy-MM-dd 格式
+                if (/^\d{4}-\d{2}-\d{2}$/.test(dateVal)) {
+                    return dateVal;
+                }
+            }
+            return String(dateVal);
+        }
 
         // JSONP请求函数
         let jsonpCounter = 0;
@@ -131,36 +169,50 @@
             jsonpRequest({ action: "getSchedule", start: CONFIG.DATE_RANGE.start, end: CONFIG.DATE_RANGE.end }, function(r) {
                 loading.style.display = "none";
                 table.style.display = "table";
-                if (r.success) { allBookings = r.data; renderScheduleTable(); updateStats(); }
-                else { allBookings = []; renderScheduleTable(); updateStats(); }
+                if (r.success) {
+                    allBookings = r.data;
+                    renderScheduleTable();
+                    updateStats();
+                } else {
+                    allBookings = [];
+                    renderScheduleTable();
+                    updateStats();
+                }
             });
         }
+
         function renderScheduleTable() {
             const dates = generateDateList();
             const timeFilter = document.getElementById("timeFilter").value;
             const slots = timeFilter === "all" ? CONFIG.TIME_SLOTS : CONFIG.TIME_SLOTS.filter(s => s.value === timeFilter);
+
+            // 构建预约映射：key = "日期_时段_车辆ID"
             const map = {};
-            // 标准化日期格式进行匹配
             allBookings.forEach(b => {
-                // 将日期标准化为 yyyy-MM-dd 格式
-                let dateStr = b.bookingDate;
-                if (b.bookingDate instanceof Date) {
-                    dateStr = b.bookingDate.toISOString().split('T')[0];
-                } else if (typeof b.bookingDate === 'string' && b.bookingDate.includes('T')) {
-                    dateStr = b.bookingDate.split('T')[0];
+                const dateStr = normalizeDate(b.bookingDate);
+                const key = dateStr + "_" + b.timeSlot + "_" + b.vehicleId;
+                if (b.vehicleId) {
+                    map[key] = b;
                 }
-                map[dateStr + "_" + b.timeSlot + "_" + b.vehicleId] = b;
             });
+
             document.getElementById("scheduleHead").innerHTML = "<tr><th>时段</th>" + dates.map(d => "<th>" + d.label + "<br><span style='font-weight:normal;font-size:0.75rem;color:var(--gray-500);'>" + d.weekDay + "</span></th>").join("") + "</tr>";
+
             let body = "";
             slots.forEach(slot => {
                 body += "<tr><th>" + slot.label + "</th>";
                 dates.forEach(date => {
+                    // 收集该日期时段的所有预约
                     let items = [];
                     for (let v = 1; v <= CONFIG.VEHICLE_COUNT; v++) {
-                        const b = map[date.value + "_" + slot.value + "_车辆" + v];
-                        if (b) items.push({ vehicle: v, booking: b });
+                        const vehicleId = "车辆" + v;
+                        const key = date.value + "_" + slot.value + "_" + vehicleId;
+                        const b = map[key];
+                        if (b) {
+                            items.push({ vehicle: v, booking: b });
+                        }
                     }
+
                     const avail = CONFIG.VEHICLE_COUNT - items.length;
 
                     if (items.length === 0) {
@@ -213,9 +265,11 @@
             });
             document.getElementById("scheduleBody").innerHTML = body;
         }
+
         function goToBooking(date, timeSlot) {
             window.location.href = "index.html?date=" + encodeURIComponent(date) + "&timeSlot=" + encodeURIComponent(timeSlot);
         }
+
         function updateStats() {
             const total = CONFIG.TIME_SLOTS.length * generateDateList().length * CONFIG.VEHICLE_COUNT;
             const approved = allBookings.filter(b => b.status === "approved").length;
@@ -225,6 +279,7 @@
             document.getElementById("pendingSlots").textContent = pending;
             document.getElementById("totalBookings").textContent = allBookings.length;
         }
+
         document.addEventListener("DOMContentLoaded", () => {
             loadSchedule();
             document.getElementById("timeFilter").addEventListener("change", renderScheduleTable);

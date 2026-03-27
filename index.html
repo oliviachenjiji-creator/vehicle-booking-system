@@ -9,10 +9,10 @@
         :root { --primary: #2563eb; --primary-dark: #1d4ed8; --success: #10b981; --warning: #f59e0b; --danger: #ef4444; --gray-50: #f9fafb; --gray-100: #f3f4f6; --gray-200: #e5e7eb; --gray-300: #d1d5db; --gray-400: #9ca3af; --gray-500: #6b7280; --gray-600: #4b5563; --gray-700: #374151; --gray-800: #1f2937; --shadow: 0 1px 3px rgba(0,0,0,0.1); }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--gray-50); color: var(--gray-800); line-height: 1.6; min-height: 100vh; }
         .header { background: white; border-bottom: 1px solid var(--gray-200); padding: 1rem; position: sticky; top: 0; z-index: 100; }
-        .header-content { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+        .header-content { max-width: 600px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
         .logo { font-size: 1.25rem; font-weight: 700; color: var(--primary); }
-        .nav-links { display: flex; gap: 1rem; }
-        .nav-links a { color: var(--gray-600); text-decoration: none; padding: 0.5rem 1rem; border-radius: 0.5rem; }
+        .nav-links { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .nav-links a { color: var(--gray-600); text-decoration: none; padding: 0.4rem 0.8rem; border-radius: 0.5rem; font-size: 0.9rem; }
         .nav-links a:hover, .nav-links a.active { background: var(--gray-100); color: var(--primary); }
         .container { max-width: 600px; margin: 0 auto; padding: 1.5rem; }
         .form-card { background: white; border-radius: 1rem; box-shadow: var(--shadow); padding: 1.5rem; }
@@ -23,12 +23,13 @@
         .form-input, .form-select, .form-textarea { width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--gray-300); border-radius: 0.5rem; font-size: 1rem; }
         .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
         .form-hint { font-size: 0.875rem; color: var(--gray-500); margin-top: 0.25rem; }
-        .radio-group { display: flex; flex-wrap: wrap; gap: 0.75rem; }
-        .radio-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border: 1px solid var(--gray-300); border-radius: 0.5rem; cursor: pointer; transition: all 0.2s; }
-        .radio-item:hover { border-color: var(--primary); background: var(--gray-50); }
-        .radio-item.selected { border-color: var(--primary); background: rgba(37, 99, 235, 0.05); }
-        .radio-item.disabled { cursor: not-allowed; opacity: 0.7; background: var(--gray-100); }
-        .radio-item.disabled:hover { border-color: var(--gray-300); background: var(--gray-100); }
+        /* 按钮式选择器 */
+        .btn-tabs { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        .btn-tab { padding: 0.5rem 1rem; border: 1px solid var(--gray-300); border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem; background: white; transition: all 0.2s; user-select: none; }
+        .btn-tab:hover { border-color: var(--primary); background: var(--gray-50); }
+        .btn-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .btn-tab.disabled { cursor: not-allowed; opacity: 0.6; background: var(--gray-100); }
+        .btn-tab.disabled:hover { border-color: var(--gray-300); background: var(--gray-100); }
         .btn { display: inline-flex; align-items: center; justify-content: center; padding: 0.75rem 1.5rem; border: none; border-radius: 0.5rem; font-size: 1rem; font-weight: 500; cursor: pointer; }
         .btn-primary { background: var(--primary); color: white; }
         .btn-primary:hover { background: var(--primary-dark); }
@@ -38,25 +39,17 @@
         .toast-success { background: var(--success); }
         .toast-error { background: var(--danger); }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        .date-tabs { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-        .date-tab { padding: 0.5rem 1rem; border: 1px solid var(--gray-300); border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem; background: white; transition: all 0.2s; }
-        .date-tab:hover { border-color: var(--primary); }
-        .date-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
-        .date-tab.disabled { cursor: not-allowed; opacity: 0.7; background: var(--gray-100); }
-        .date-tab.disabled:hover { border-color: var(--gray-300); background: var(--gray-100); }
+        .locked-info { background: #dbeafe; padding: 0.75rem 1rem; border-radius: 0.5rem; margin-bottom: 1rem; font-size: 0.875rem; color: var(--primary); border: 1px solid var(--primary); }
         .spinner { width: 1rem; height: 1rem; border: 2px solid var(--gray-200); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .locked-info { background: var(--gray-100); padding: 0.5rem 1rem; border-radius: 0.5rem; margin-bottom: 1rem; font-size: 0.875rem; color: var(--gray-600); }
         @media (max-width: 768px) {
-            .header-content { flex-direction: column; align-items: flex-start; }
-            .nav-links { flex-wrap: wrap; }
+            .header-content { flex-direction: column; align-items: stretch; }
+            .nav-links { justify-content: center; }
             .container { padding: 1rem; }
             .form-card { padding: 1rem; }
             .form-title { font-size: 1.25rem; }
-            .radio-group { flex-direction: column; }
-            .radio-item { width: 100%; justify-content: center; }
-            .date-tabs { flex-direction: column; }
-            .date-tab { width: 100%; text-align: center; }
+            .btn-tabs { flex-direction: column; }
+            .btn-tab { text-align: center; }
         }
     </style>
 </head>
@@ -77,16 +70,56 @@
             <h1 class="form-title">Astra Demo预约申请</h1>
             <div class="locked-info hidden" id="lockedInfo"></div>
             <form id="bookingForm">
-                <div class="form-group"><label class="form-label">预约日期 <span class="required">*</span></label><div class="date-tabs" id="dateTabs"></div><input type="hidden" id="bookingDate" required></div>
-                <div class="form-group"><label class="form-label">预约时段 <span class="required">*</span></label><div class="radio-group" id="timeSlots"></div><input type="hidden" id="timeSlot" required></div>
-                <div class="form-group"><label class="form-label">行车Demo线路 <span class="required">*</span></label><div class="radio-group" id="routeOptions"></div><input type="hidden" id="demoRoute" required></div>
-                <div class="form-group"><label class="form-label">泊车Demo体验 <span class="required">*</span></label><div class="radio-group" id="parkingOptions"></div><input type="hidden" id="parkingDemo" required></div>
-                <div class="form-group"><label class="form-label">客户公司名称 <span class="required">*</span></label><input type="text" class="form-input" id="companyName" required placeholder="请输入公司名称"></div>
-                <div class="form-group"><label class="form-label">上车人数 <span class="required">*</span></label><input type="number" class="form-input" id="passengerCount" min="1" max="3" required placeholder="请输入人数"><p class="form-hint">车辆资源限制，建议每个客户不超过3人，即提供1台车</p></div>
-                <div class="form-group"><label class="form-label">车辆语言 <span class="required">*</span></label><div class="radio-group" id="languageOptions"></div><p class="form-hint">HMI界面和导航语言支持中文+英文，默认中文</p><input type="hidden" id="vehicleLanguage" required></div>
-                <div class="form-group"><label class="form-label">客户对接人 <span class="required">*</span></label><input type="text" class="form-input" id="contactName" required placeholder="请输入对接人姓名"><p class="form-hint">请提供陪同客户到场的人员，方便现场运营人员与您联系</p></div>
-                <div class="form-group"><label class="form-label">对接人电话 <span class="required">*</span></label><input type="tel" class="form-input" id="contactPhone" required placeholder="请输入手机号码" maxlength="11"><p class="form-hint">用于查询预约状态，请准确填写</p></div>
-                <div class="form-group"><label class="form-label">备注</label><textarea class="form-textarea" id="remarks" placeholder="如有特殊需求请备注说明"></textarea><p class="form-hint">如对Demo开始时间、Demo线路、讲解人员有特殊要求，请说明</p></div>
+                <div class="form-group">
+                    <label class="form-label">预约日期 <span class="required">*</span></label>
+                    <div class="btn-tabs" id="dateTabs"></div>
+                    <input type="hidden" id="bookingDate" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">预约时段 <span class="required">*</span></label>
+                    <div class="btn-tabs" id="timeSlots"></div>
+                    <input type="hidden" id="timeSlot" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">行车Demo线路 <span class="required">*</span></label>
+                    <div class="btn-tabs" id="routeOptions"></div>
+                    <input type="hidden" id="demoRoute" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">泊车Demo体验 <span class="required">*</span></label>
+                    <div class="btn-tabs" id="parkingOptions"></div>
+                    <input type="hidden" id="parkingDemo" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">客户公司名称 <span class="required">*</span></label>
+                    <input type="text" class="form-input" id="companyName" required placeholder="请输入公司名称">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">上车人数 <span class="required">*</span></label>
+                    <input type="number" class="form-input" id="passengerCount" min="1" max="3" required placeholder="请输入人数">
+                    <p class="form-hint">车辆资源限制，建议每个客户不超过3人，即提供1台车</p>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">车辆语言 <span class="required">*</span></label>
+                    <div class="btn-tabs" id="languageOptions"></div>
+                    <p class="form-hint">HMI界面和导航语言支持中文+英文，默认中文</p>
+                    <input type="hidden" id="vehicleLanguage" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">客户对接人 <span class="required">*</span></label>
+                    <input type="text" class="form-input" id="contactName" required placeholder="请输入对接人姓名">
+                    <p class="form-hint">请提供陪同客户到场的人员，方便现场运营人员与您联系</p>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">对接人电话 <span class="required">*</span></label>
+                    <input type="tel" class="form-input" id="contactPhone" required placeholder="请输入手机号码" maxlength="11">
+                    <p class="form-hint">用于查询预约状态，请准确填写</p>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">备注</label>
+                    <textarea class="form-textarea" id="remarks" placeholder="如有特殊需求请备注说明"></textarea>
+                    <p class="form-hint">如对Demo开始时间、Demo线路、讲解人员有特殊要求，请说明</p>
+                </div>
                 <button type="submit" class="btn btn-primary btn-full" id="submitBtn">提交预约申请</button>
             </form>
             <p style="text-align:center;margin-top:1.5rem;color:var(--gray-500);">查看<a href="schedule.html" style="color:var(--primary);">排班日历</a>了解各时段预约情况</p>
@@ -150,67 +183,48 @@
             return (date.getMonth() + 1) + "/" + date.getDate() + " " + weekDay;
         }
 
-        function initDateTabs() {
-            const c = document.getElementById("dateTabs");
-            const dates = generateDateList();
-            c.innerHTML = dates.map(d => {
-                const isLocked = lockedDate && lockedDate !== d.value;
-                const isActive = lockedDate === d.value;
-                let cls = "date-tab";
+        // 初始化按钮式选择器（支持锁定和toggle取消）
+        function initBtnTabs(containerId, options, hiddenId, isLockable = false) {
+            const container = document.getElementById(containerId);
+            const isTimeSlot = containerId === "timeSlots";
+            const isDate = containerId === "dateTabs";
+
+            container.innerHTML = options.map(opt => {
+                let isLocked = false;
+                let isActive = false;
+
+                if (isDate && lockedDate) {
+                    isLocked = lockedDate !== opt.value;
+                    isActive = lockedDate === opt.value;
+                } else if (isTimeSlot && lockedTimeSlot) {
+                    isLocked = lockedTimeSlot !== opt.value;
+                    isActive = lockedTimeSlot === opt.value;
+                }
+
+                let cls = "btn-tab";
                 if (isActive) cls += " active";
                 if (isLocked) cls += " disabled";
-                return '<button type="button" class="' + cls + '" data-value="' + d.value + '"' + (isLocked ? ' disabled' : '') + '>' + d.label + '</button>';
+
+                return '<button type="button" class="' + cls + '" data-value="' + opt.value + '"' + (isLocked ? ' disabled' : '') + '>' + opt.label + '</button>';
             }).join("");
 
-            c.querySelectorAll(".date-tab:not(.disabled)").forEach(t => {
-                t.addEventListener("click", () => {
-                    const isActive = t.classList.contains("active");
-                    c.querySelectorAll(".date-tab").forEach(x => x.classList.remove("active"));
+            // 绑定点击事件
+            container.querySelectorAll(".btn-tab:not(.disabled)").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    const isActive = btn.classList.contains("active");
+                    container.querySelectorAll(".btn-tab").forEach(x => x.classList.remove("active"));
                     if (!isActive) {
-                        t.classList.add("active");
-                        document.getElementById("bookingDate").value = t.dataset.value;
+                        btn.classList.add("active");
+                        document.getElementById(hiddenId).value = btn.dataset.value;
                     } else {
-                        document.getElementById("bookingDate").value = "";
+                        document.getElementById(hiddenId).value = "";
                     }
                 });
             });
 
-            // 如果有锁定的日期，自动选中
-            if (lockedDate) {
-                document.getElementById("bookingDate").value = lockedDate;
-            }
-        }
-
-        function initRadio(cid, opts, hid) {
-            const c = document.getElementById(cid);
-            const isTimeSlot = cid === "timeSlots";
-            c.innerHTML = opts.map(o => {
-                const isLocked = isTimeSlot && lockedTimeSlot && lockedTimeSlot !== o.value;
-                const isSelected = isTimeSlot && lockedTimeSlot === o.value;
-                let cls = "radio-item";
-                if (isSelected) cls += " selected";
-                if (isLocked) cls += " disabled";
-                return '<label class="' + cls + '" data-value="' + o.value + '"' + (isLocked ? ' style="pointer-events:none;"' : '') + '><input type="radio" value="' + o.value + '"' + (isSelected ? ' checked' : '') + (isLocked ? ' disabled' : '') + '><span>' + o.label + '</span></label>';
-            }).join("");
-
-            c.querySelectorAll(".radio-item:not(.disabled)").forEach(i => {
-                i.addEventListener("click", () => {
-                    const isSelected = i.classList.contains("selected");
-                    c.querySelectorAll(".radio-item").forEach(x => x.classList.remove("selected"));
-                    if (!isSelected) {
-                        i.classList.add("selected");
-                        i.querySelector("input").checked = true;
-                        document.getElementById(hid).value = i.dataset.value;
-                    } else {
-                        i.querySelector("input").checked = false;
-                        document.getElementById(hid).value = "";
-                    }
-                });
-            });
-
-            // 如果有锁定的时段，自动选中
-            if (isTimeSlot && lockedTimeSlot) {
-                document.getElementById(hid).value = lockedTimeSlot;
+            // 设置锁定的初始值
+            if ((isDate && lockedDate) || (isTimeSlot && lockedTimeSlot)) {
+                document.getElementById(hiddenId).value = isDate ? lockedDate : lockedTimeSlot;
             }
         }
 
@@ -260,15 +274,10 @@
                 if (r.success) {
                     showToast("预约申请已提交，请等待审批", "success");
                     document.getElementById("bookingForm").reset();
-                    document.querySelectorAll(".radio-item:not(.disabled)").forEach(i => i.classList.remove("selected"));
-                    document.querySelectorAll(".date-tab:not(.disabled)").forEach(t => t.classList.remove("active"));
-                    // 保持锁定的日期和时段
-                    if (lockedDate) {
-                        document.getElementById("bookingDate").value = lockedDate;
-                    }
-                    if (lockedTimeSlot) {
-                        document.getElementById("timeSlot").value = lockedTimeSlot;
-                    }
+                    // 重置所有按钮状态（保持锁定的不变）
+                    document.querySelectorAll(".btn-tab:not(.disabled)").forEach(btn => btn.classList.remove("active"));
+                    if (lockedDate) document.getElementById("bookingDate").value = lockedDate;
+                    if (lockedTimeSlot) document.getElementById("timeSlot").value = lockedTimeSlot;
                 } else {
                     showToast(r.message || "提交失败", "error");
                 }
@@ -289,11 +298,13 @@
                 document.getElementById("lockedInfo").classList.remove("hidden");
             }
 
-            initDateTabs();
-            initRadio("timeSlots", CONFIG.TIME_SLOTS, "timeSlot");
-            initRadio("routeOptions", CONFIG.DEMO_ROUTES, "demoRoute");
-            initRadio("parkingOptions", CONFIG.PARKING_OPTIONS, "parkingDemo");
-            initRadio("languageOptions", CONFIG.LANGUAGES, "vehicleLanguage");
+            // 初始化所有选择器
+            initBtnTabs("dateTabs", generateDateList(), "bookingDate", true);
+            initBtnTabs("timeSlots", CONFIG.TIME_SLOTS, "timeSlot", true);
+            initBtnTabs("routeOptions", CONFIG.DEMO_ROUTES, "demoRoute");
+            initBtnTabs("parkingOptions", CONFIG.PARKING_OPTIONS, "parkingDemo");
+            initBtnTabs("languageOptions", CONFIG.LANGUAGES, "vehicleLanguage");
+
             document.getElementById("bookingForm").addEventListener("submit", handleSubmit);
         });
     </script>
