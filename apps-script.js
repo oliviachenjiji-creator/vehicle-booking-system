@@ -61,7 +61,7 @@ const CONFIG = {
 
   // 预约日期范围
   DATE_RANGE: {
-    start: '2026-04-23',
+    start: '2026-04-24',
     end: '2026-04-30'
   }
 };

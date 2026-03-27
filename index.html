@@ -65,11 +65,11 @@
                 <div class="form-group"><label class="form-label">预约时段 <span class="required">*</span></label><div class="radio-group" id="timeSlots"></div><input type="hidden" id="timeSlot" required></div>
                 <div class="form-group"><label class="form-label">Demo线路 <span class="required">*</span></label><div class="radio-group" id="routeOptions"></div><input type="hidden" id="demoRoute" required></div>
                 <div class="form-group"><label class="form-label">客户公司名称 <span class="required">*</span></label><input type="text" class="form-input" id="companyName" required placeholder="请输入公司名称"></div>
-                <div class="form-group"><label class="form-label">上车人数 <span class="required">*</span></label><select class="form-select" id="passengerCount" required><option value="">请选择人数</option><option value="1">1人</option><option value="2">2人</option><option value="3">3人（含讲解专家最多）</option></select><p class="form-hint">包含讲解专家在内最多3人</p></div>
-                <div class="form-group"><label class="form-label">车辆语言 <span class="required">*</span></label><div class="radio-group" id="languageOptions"></div><input type="hidden" id="vehicleLanguage" required></div>
-                <div class="form-group"><label class="form-label">对接人姓名 <span class="required">*</span></label><input type="text" class="form-input" id="contactName" required placeholder="请输入对接人姓名"></div>
+                <div class="form-group"><label class="form-label">上车人数 <span class="required">*</span></label><input type="number" class="form-input" id="passengerCount" min="1" max="3" required placeholder="请输入人数"><p class="form-hint">车辆资源限制，建议每个客户不超过3人，即提供1台车</p></div>
+                <div class="form-group"><label class="form-label">车辆语言 <span class="required">*</span></label><div class="radio-group" id="languageOptions"></div><p class="form-hint">HMI界面和导航语言支持中文+英文，默认中文</p><input type="hidden" id="vehicleLanguage" required></div>
+                <div class="form-group"><label class="form-label">客户对接人 <span class="required">*</span></label><input type="text" class="form-input" id="contactName" required placeholder="请输入对接人姓名"><p class="form-hint">请提供陪同客户到场的人员，方便现场运营人员与您联系</p></div>
                 <div class="form-group"><label class="form-label">对接人电话 <span class="required">*</span></label><input type="tel" class="form-input" id="contactPhone" required placeholder="请输入手机号码" maxlength="11"><p class="form-hint">用于查询预约状态，请准确填写</p></div>
-                <div class="form-group"><label class="form-label">备注</label><textarea class="form-textarea" id="remarks" placeholder="如有特殊需求请备注说明"></textarea></div>
+                <div class="form-group"><label class="form-label">备注</label><textarea class="form-textarea" id="remarks" placeholder="如有特殊需求请备注说明"></textarea><p class="form-hint">如对Demo开始时间、Demo线路、讲解人员有特殊要求，请说明</p></div>
                 <button type="submit" class="btn btn-primary btn-full" id="submitBtn">提交预约申请</button>
             </form>
             <p style="text-align:center;margin-top:1.5rem;color:var(--gray-500);">查看<a href="schedule.html" style="color:var(--primary);">排班日历</a>了解各时段预约情况</p>
@@ -78,9 +78,9 @@
     <script>
         const CONFIG = {
             API_URL: "https://script.google.com/macros/s/AKfycbyyLi44_nTE5AlDf4hfOAileeMoIyn-Jyz7aDf5UjsRMM8nA71b9XiSFDqXgZ9uIF46/exec",
-            DATE_RANGE: { start: "2026-04-23", end: "2026-04-30" },
+            DATE_RANGE: { start: "2026-04-24", end: "2026-04-30" },
             TIME_SLOTS: [{ value: "10:00-12:00", label: "10:00 - 12:00" }, { value: "14:00-16:00", label: "14:00 - 16:00" }, { value: "17:00-19:00", label: "17:00 - 19:00" }],
-            DEMO_ROUTES: [{ value: "顺义短线路1", label: "顺义短线路1" }, { value: "顺义短线路2", label: "顺义短线路2" }],
+            DEMO_ROUTES: [{ value: "线路1-顺义市区40mins内", label: "线路1-顺义市区40mins内" }, { value: "线路2-望京市区1h30mins内", label: "线路2-望京市区1h30mins内" }, { value: "自由泛化", label: "自由泛化" }],
             LANGUAGES: [{ value: "中文", label: "中文" }, { value: "英文", label: "英文" }]
         };
         function generateDateList() { const dates = []; const start = new Date(CONFIG.DATE_RANGE.start); const end = new Date(CONFIG.DATE_RANGE.end); while (start <= end) { const date = new Date(start); const weekDay = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][date.getDay()]; dates.push({ value: date.toISOString().split("T")[0], label: (date.getMonth() + 1) + "/" + date.getDate() + " " + weekDay }); start.setDate(start.getDate() + 1); } return dates; }
@@ -113,8 +113,10 @@
             e.preventDefault();
             const btn = document.getElementById("submitBtn");
             const fd = { bookingDate: document.getElementById("bookingDate").value, timeSlot: document.getElementById("timeSlot").value, demoRoute: document.getElementById("demoRoute").value, companyName: document.getElementById("companyName").value.trim(), passengerCount: document.getElementById("passengerCount").value, vehicleLanguage: document.getElementById("vehicleLanguage").value, contactName: document.getElementById("contactName").value.trim(), contactPhone: document.getElementById("contactPhone").value.trim(), remarks: document.getElementById("remarks").value.trim() };
-            const req = { bookingDate: "预约日期", timeSlot: "预约时段", demoRoute: "Demo线路", companyName: "客户公司名称", passengerCount: "上车人数", vehicleLanguage: "车辆语言", contactName: "对接人姓名", contactPhone: "对接人电话" };
+            const req = { bookingDate: "预约日期", timeSlot: "预约时段", demoRoute: "Demo线路", companyName: "客户公司名称", passengerCount: "上车人数", vehicleLanguage: "车辆语言", contactName: "客户对接人", contactPhone: "对接人电话" };
             for (const [f, l] of Object.entries(req)) if (!fd[f]) { showToast("请选择" + l, "error"); return; }
+            const passengerCount = parseInt(fd.passengerCount);
+            if (isNaN(passengerCount) || passengerCount < 1 || passengerCount > 3) { showToast("上车人数请输入1-3之间的整数", "error"); return; }
             if (!/^\d{11}$/.test(fd.contactPhone)) { showToast("请输入正确的手机号码", "error"); return; }
             setLoading(btn, true);
             jsonpRequest({ action: "createBooking", data: fd }, function(r) {
