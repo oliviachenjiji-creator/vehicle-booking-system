@@ -14,8 +14,8 @@
         .nav-links { display: flex; gap: 1rem; }
         .nav-links a { color: var(--gray-600); text-decoration: none; padding: 0.5rem 1rem; border-radius: 0.5rem; }
         .nav-links a:hover, .nav-links a.active { background: var(--gray-100); color: var(--primary); }
-        .container { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
-        .form-card { background: white; border-radius: 1rem; box-shadow: var(--shadow); padding: 2rem; max-width: 600px; margin: 0 auto; }
+        .container { max-width: 600px; margin: 0 auto; padding: 1.5rem; }
+        .form-card { background: white; border-radius: 1rem; box-shadow: var(--shadow); padding: 1.5rem; }
         .form-title { font-size: 1.5rem; font-weight: 600; margin-bottom: 1.5rem; }
         .form-group { margin-bottom: 1.25rem; }
         .form-label { display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--gray-700); }
@@ -24,9 +24,11 @@
         .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
         .form-hint { font-size: 0.875rem; color: var(--gray-500); margin-top: 0.25rem; }
         .radio-group { display: flex; flex-wrap: wrap; gap: 0.75rem; }
-        .radio-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border: 1px solid var(--gray-300); border-radius: 0.5rem; cursor: pointer; }
+        .radio-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border: 1px solid var(--gray-300); border-radius: 0.5rem; cursor: pointer; transition: all 0.2s; }
         .radio-item:hover { border-color: var(--primary); background: var(--gray-50); }
         .radio-item.selected { border-color: var(--primary); background: rgba(37, 99, 235, 0.05); }
+        .radio-item.disabled { cursor: not-allowed; opacity: 0.7; background: var(--gray-100); }
+        .radio-item.disabled:hover { border-color: var(--gray-300); background: var(--gray-100); }
         .btn { display: inline-flex; align-items: center; justify-content: center; padding: 0.75rem 1.5rem; border: none; border-radius: 0.5rem; font-size: 1rem; font-weight: 500; cursor: pointer; }
         .btn-primary { background: var(--primary); color: white; }
         .btn-primary:hover { background: var(--primary-dark); }
@@ -37,12 +39,25 @@
         .toast-error { background: var(--danger); }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         .date-tabs { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-        .date-tab { padding: 0.5rem 1rem; border: 1px solid var(--gray-300); border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem; background: white; }
+        .date-tab { padding: 0.5rem 1rem; border: 1px solid var(--gray-300); border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem; background: white; transition: all 0.2s; }
         .date-tab:hover { border-color: var(--primary); }
         .date-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .date-tab.disabled { cursor: not-allowed; opacity: 0.7; background: var(--gray-100); }
+        .date-tab.disabled:hover { border-color: var(--gray-300); background: var(--gray-100); }
         .spinner { width: 1rem; height: 1rem; border: 2px solid var(--gray-200); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        @media (max-width: 768px) { .header-content { flex-direction: column; } .radio-group { flex-direction: column; } .radio-item { width: 100%; } }
+        .locked-info { background: var(--gray-100); padding: 0.5rem 1rem; border-radius: 0.5rem; margin-bottom: 1rem; font-size: 0.875rem; color: var(--gray-600); }
+        @media (max-width: 768px) {
+            .header-content { flex-direction: column; align-items: flex-start; }
+            .nav-links { flex-wrap: wrap; }
+            .container { padding: 1rem; }
+            .form-card { padding: 1rem; }
+            .form-title { font-size: 1.25rem; }
+            .radio-group { flex-direction: column; }
+            .radio-item { width: 100%; justify-content: center; }
+            .date-tabs { flex-direction: column; }
+            .date-tab { width: 100%; text-align: center; }
+        }
     </style>
 </head>
 <body>
@@ -60,6 +75,7 @@
     <main class="container">
         <div class="form-card">
             <h1 class="form-title">Astra Demo预约申请</h1>
+            <div class="locked-info hidden" id="lockedInfo"></div>
             <form id="bookingForm">
                 <div class="form-group"><label class="form-label">预约日期 <span class="required">*</span></label><div class="date-tabs" id="dateTabs"></div><input type="hidden" id="bookingDate" required></div>
                 <div class="form-group"><label class="form-label">预约时段 <span class="required">*</span></label><div class="radio-group" id="timeSlots"></div><input type="hidden" id="timeSlot" required></div>
@@ -84,41 +100,118 @@
             DEMO_ROUTES: [{ value: "线路1-顺义市区40mins内", label: "线路1-顺义市区40mins内" }, { value: "线路2-望京市区1h30mins内", label: "线路2-望京市区1h30mins内" }, { value: "自由泛化", label: "自由泛化" }],
             PARKING_OPTIONS: [{ value: "有", label: "有" }, { value: "无", label: "无" }],
             LANGUAGES: [{ value: "中文", label: "中文" }, { value: "英文", label: "英文" }],
-            VEHICLE_COUNT: 8,  // 6辆主车辆 + 2辆备选车
-            MAIN_VEHICLE_COUNT: 6  // 主车辆数量
+            VEHICLE_COUNT: 8,
+            MAIN_VEHICLE_COUNT: 6
         };
-        function generateDateList() { const dates = []; const start = new Date(CONFIG.DATE_RANGE.start); const end = new Date(CONFIG.DATE_RANGE.end); while (start <= end) { const date = new Date(start); const weekDay = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][date.getDay()]; dates.push({ value: date.toISOString().split("T")[0], label: (date.getMonth() + 1) + "/" + date.getDate() + " " + weekDay }); start.setDate(start.getDate() + 1); } return dates; }
-        function showToast(message, type) { const toast = document.createElement("div"); toast.className = "toast toast-" + type; toast.textContent = message; document.body.appendChild(toast); setTimeout(() => toast.remove(), 3000); }
-        function setLoading(btn, loading) { if (loading) { btn.disabled = true; btn.dataset.orig = btn.textContent; btn.innerHTML = '<span class="spinner" style="margin-right:0.5rem;"></span>提交中...'; } else { btn.disabled = false; btn.textContent = btn.dataset.orig || "提交预约申请"; } }
+
+        let lockedDate = null;
+        let lockedTimeSlot = null;
+
+        function generateDateList() {
+            const dates = [];
+            const start = new Date(CONFIG.DATE_RANGE.start);
+            const end = new Date(CONFIG.DATE_RANGE.end);
+            while (start <= end) {
+                const date = new Date(start);
+                const weekDay = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][date.getDay()];
+                dates.push({ value: date.toISOString().split("T")[0], label: (date.getMonth() + 1) + "/" + date.getDate() + " " + weekDay });
+                start.setDate(start.getDate() + 1);
+            }
+            return dates;
+        }
+
+        function showToast(message, type) {
+            const toast = document.createElement("div");
+            toast.className = "toast toast-" + type;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function setLoading(btn, loading) {
+            if (loading) {
+                btn.disabled = true;
+                btn.dataset.orig = btn.textContent;
+                btn.innerHTML = '<span class="spinner" style="margin-right:0.5rem;"></span>提交中...';
+            } else {
+                btn.disabled = false;
+                btn.textContent = btn.dataset.orig || "提交预约申请";
+            }
+        }
+
+        function getQueryParam(param) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param);
+        }
+
+        function formatDateLabel(dateStr) {
+            const date = new Date(dateStr);
+            const weekDay = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][date.getDay()];
+            return (date.getMonth() + 1) + "/" + date.getDate() + " " + weekDay;
+        }
+
         function initDateTabs() {
             const c = document.getElementById("dateTabs");
-            c.innerHTML = generateDateList().map(d => '<button type="button" class="date-tab" data-value="' + d.value + '">' + d.label + '</button>').join("");
-            c.querySelectorAll(".date-tab").forEach(t => t.addEventListener("click", () => {
-                const isActive = t.classList.contains("active");
-                c.querySelectorAll(".date-tab").forEach(x => x.classList.remove("active"));
-                if (!isActive) {
-                    t.classList.add("active");
-                    document.getElementById("bookingDate").value = t.dataset.value;
-                } else {
-                    document.getElementById("bookingDate").value = "";
-                }
-            }));
+            const dates = generateDateList();
+            c.innerHTML = dates.map(d => {
+                const isLocked = lockedDate && lockedDate !== d.value;
+                const isActive = lockedDate === d.value;
+                let cls = "date-tab";
+                if (isActive) cls += " active";
+                if (isLocked) cls += " disabled";
+                return '<button type="button" class="' + cls + '" data-value="' + d.value + '"' + (isLocked ? ' disabled' : '') + '>' + d.label + '</button>';
+            }).join("");
+
+            c.querySelectorAll(".date-tab:not(.disabled)").forEach(t => {
+                t.addEventListener("click", () => {
+                    const isActive = t.classList.contains("active");
+                    c.querySelectorAll(".date-tab").forEach(x => x.classList.remove("active"));
+                    if (!isActive) {
+                        t.classList.add("active");
+                        document.getElementById("bookingDate").value = t.dataset.value;
+                    } else {
+                        document.getElementById("bookingDate").value = "";
+                    }
+                });
+            });
+
+            // 如果有锁定的日期，自动选中
+            if (lockedDate) {
+                document.getElementById("bookingDate").value = lockedDate;
+            }
         }
+
         function initRadio(cid, opts, hid) {
             const c = document.getElementById(cid);
-            c.innerHTML = opts.map(o => '<label class="radio-item" data-value="' + o.value + '"><input type="radio" value="' + o.value + '"><span>' + o.label + '</span></label>').join("");
-            c.querySelectorAll(".radio-item").forEach(i => i.addEventListener("click", () => {
-                const isSelected = i.classList.contains("selected");
-                c.querySelectorAll(".radio-item").forEach(x => x.classList.remove("selected"));
-                if (!isSelected) {
-                    i.classList.add("selected");
-                    i.querySelector("input").checked = true;
-                    document.getElementById(hid).value = i.dataset.value;
-                } else {
-                    i.querySelector("input").checked = false;
-                    document.getElementById(hid).value = "";
-                }
-            }));
+            const isTimeSlot = cid === "timeSlots";
+            c.innerHTML = opts.map(o => {
+                const isLocked = isTimeSlot && lockedTimeSlot && lockedTimeSlot !== o.value;
+                const isSelected = isTimeSlot && lockedTimeSlot === o.value;
+                let cls = "radio-item";
+                if (isSelected) cls += " selected";
+                if (isLocked) cls += " disabled";
+                return '<label class="' + cls + '" data-value="' + o.value + '"' + (isLocked ? ' style="pointer-events:none;"' : '') + '><input type="radio" value="' + o.value + '"' + (isSelected ? ' checked' : '') + (isLocked ? ' disabled' : '') + '><span>' + o.label + '</span></label>';
+            }).join("");
+
+            c.querySelectorAll(".radio-item:not(.disabled)").forEach(i => {
+                i.addEventListener("click", () => {
+                    const isSelected = i.classList.contains("selected");
+                    c.querySelectorAll(".radio-item").forEach(x => x.classList.remove("selected"));
+                    if (!isSelected) {
+                        i.classList.add("selected");
+                        i.querySelector("input").checked = true;
+                        document.getElementById(hid).value = i.dataset.value;
+                    } else {
+                        i.querySelector("input").checked = false;
+                        document.getElementById(hid).value = "";
+                    }
+                });
+            });
+
+            // 如果有锁定的时段，自动选中
+            if (isTimeSlot && lockedTimeSlot) {
+                document.getElementById(hid).value = lockedTimeSlot;
+            }
         }
 
         // JSONP请求函数
@@ -144,7 +237,18 @@
         async function handleSubmit(e) {
             e.preventDefault();
             const btn = document.getElementById("submitBtn");
-            const fd = { bookingDate: document.getElementById("bookingDate").value, timeSlot: document.getElementById("timeSlot").value, demoRoute: document.getElementById("demoRoute").value, parkingDemo: document.getElementById("parkingDemo").value, companyName: document.getElementById("companyName").value.trim(), passengerCount: document.getElementById("passengerCount").value, vehicleLanguage: document.getElementById("vehicleLanguage").value, contactName: document.getElementById("contactName").value.trim(), contactPhone: document.getElementById("contactPhone").value.trim(), remarks: document.getElementById("remarks").value.trim() };
+            const fd = {
+                bookingDate: document.getElementById("bookingDate").value,
+                timeSlot: document.getElementById("timeSlot").value,
+                demoRoute: document.getElementById("demoRoute").value,
+                parkingDemo: document.getElementById("parkingDemo").value,
+                companyName: document.getElementById("companyName").value.trim(),
+                passengerCount: document.getElementById("passengerCount").value,
+                vehicleLanguage: document.getElementById("vehicleLanguage").value,
+                contactName: document.getElementById("contactName").value.trim(),
+                contactPhone: document.getElementById("contactPhone").value.trim(),
+                remarks: document.getElementById("remarks").value.trim()
+            };
             const req = { bookingDate: "预约日期", timeSlot: "预约时段", demoRoute: "行车Demo线路", parkingDemo: "泊车Demo体验", companyName: "客户公司名称", passengerCount: "上车人数", vehicleLanguage: "车辆语言", contactName: "客户对接人", contactPhone: "对接人电话" };
             for (const [f, l] of Object.entries(req)) if (!fd[f]) { showToast("请选择" + l, "error"); return; }
             const passengerCount = parseInt(fd.passengerCount);
@@ -156,14 +260,42 @@
                 if (r.success) {
                     showToast("预约申请已提交，请等待审批", "success");
                     document.getElementById("bookingForm").reset();
-                    document.querySelectorAll(".radio-item").forEach(i => i.classList.remove("selected"));
-                    document.querySelectorAll(".date-tab").forEach(t => t.classList.remove("active"));
+                    document.querySelectorAll(".radio-item:not(.disabled)").forEach(i => i.classList.remove("selected"));
+                    document.querySelectorAll(".date-tab:not(.disabled)").forEach(t => t.classList.remove("active"));
+                    // 保持锁定的日期和时段
+                    if (lockedDate) {
+                        document.getElementById("bookingDate").value = lockedDate;
+                    }
+                    if (lockedTimeSlot) {
+                        document.getElementById("timeSlot").value = lockedTimeSlot;
+                    }
                 } else {
                     showToast(r.message || "提交失败", "error");
                 }
             });
         }
-        document.addEventListener("DOMContentLoaded", () => { initDateTabs(); initRadio("timeSlots", CONFIG.TIME_SLOTS, "timeSlot"); initRadio("routeOptions", CONFIG.DEMO_ROUTES, "demoRoute"); initRadio("parkingOptions", CONFIG.PARKING_OPTIONS, "parkingDemo"); initRadio("languageOptions", CONFIG.LANGUAGES, "vehicleLanguage"); document.getElementById("bookingForm").addEventListener("submit", handleSubmit); });
+
+        document.addEventListener("DOMContentLoaded", () => {
+            // 检查URL参数
+            lockedDate = getQueryParam("date");
+            lockedTimeSlot = getQueryParam("timeSlot");
+
+            // 显示锁定信息
+            if (lockedDate || lockedTimeSlot) {
+                let info = "已选择：";
+                if (lockedDate) info += "日期 " + formatDateLabel(lockedDate);
+                if (lockedTimeSlot) info += " 时段 " + lockedTimeSlot;
+                document.getElementById("lockedInfo").textContent = info;
+                document.getElementById("lockedInfo").classList.remove("hidden");
+            }
+
+            initDateTabs();
+            initRadio("timeSlots", CONFIG.TIME_SLOTS, "timeSlot");
+            initRadio("routeOptions", CONFIG.DEMO_ROUTES, "demoRoute");
+            initRadio("parkingOptions", CONFIG.PARKING_OPTIONS, "parkingDemo");
+            initRadio("languageOptions", CONFIG.LANGUAGES, "vehicleLanguage");
+            document.getElementById("bookingForm").addEventListener("submit", handleSubmit);
+        });
     </script>
 </body>
 </html>

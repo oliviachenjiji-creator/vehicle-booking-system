@@ -17,13 +17,6 @@
         .container { max-width: 1400px; margin: 0 auto; padding: 1.5rem; }
         .page-header { margin-bottom: 1.5rem; }
         .page-title { font-size: 1.5rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
-        .page-desc { color: var(--gray-500); margin-top: 0.25rem; }
-        .legend { display: flex; gap: 1.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
-        .legend-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; }
-        .legend-color { width: 1rem; height: 1rem; border-radius: 0.25rem; }
-        .legend-available { background: #d1fae5; }
-        .legend-approved { background: #dbeafe; }
-        .legend-pending { background: #fef3c7; }
         .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
         .stat-card { background: white; border-radius: 0.75rem; padding: 1rem; box-shadow: var(--shadow); text-align: center; }
         .stat-value { font-size: 1.5rem; font-weight: 700; color: var(--gray-800); }
@@ -39,12 +32,15 @@
         .btn-outline { background: white; border: 1px solid var(--gray-300); color: var(--gray-700); }
         .schedule-card { background: white; border-radius: 1rem; box-shadow: var(--shadow); overflow: hidden; }
         .schedule-table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        .schedule-table { width: 100%; border-collapse: collapse; min-width: 800px; }
-        .schedule-table th, .schedule-table td { padding: 0.75rem; text-align: center; border: 1px solid var(--gray-200); min-width: 100px; }
+        .schedule-table { width: 100%; border-collapse: collapse; min-width: 600px; }
+        .schedule-table th, .schedule-table td { padding: 0.75rem; text-align: center; border: 1px solid var(--gray-200); min-width: 80px; vertical-align: top; }
         .schedule-table th { background: var(--gray-100); font-weight: 600; color: var(--gray-700); white-space: nowrap; }
-        .schedule-table th:first-child { background: var(--gray-200); min-width: 120px; }
-        .schedule-table td { vertical-align: top; }
-        .slot-available { background: #d1fae5; color: #065f46; }
+        .schedule-table th:first-child { background: var(--gray-200); min-width: 100px; }
+        .slot-available { background: #d1fae5; color: #065f46; cursor: pointer; transition: background 0.2s; }
+        .slot-available:hover { background: #a7f3d0; }
+        .slot-warning { background: #fef3c7; color: #92400e; cursor: pointer; transition: background 0.2s; }
+        .slot-warning:hover { background: #fde68a; }
+        .slot-full { background: #fee2e2; color: #991b1b; }
         .slot-item { padding: 0.375rem; margin: 0.25rem 0; border-radius: 0.375rem; font-size: 0.75rem; text-align: left; }
         .slot-item-approved { background: rgba(37, 99, 235, 0.15); }
         .slot-item-pending { background: rgba(245, 158, 11, 0.15); }
@@ -54,7 +50,12 @@
         .toast { position: fixed; top: 1rem; right: 1rem; padding: 1rem 1.5rem; border-radius: 0.5rem; color: white; font-weight: 500; z-index: 1000; animation: slideIn 0.3s ease; }
         .toast-error { background: var(--danger); }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @media (max-width: 768px) { .header-content { flex-direction: column; } .schedule-table th, .schedule-table td { padding: 0.5rem; font-size: 0.75rem; min-width: 80px; } }
+        @media (max-width: 768px) {
+            .header-content { flex-direction: column; }
+            .schedule-table th, .schedule-table td { padding: 0.5rem; font-size: 0.7rem; min-width: 60px; }
+            .slot-item { font-size: 0.65rem; padding: 0.25rem; }
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+        }
     </style>
 </head>
 <body>
@@ -71,13 +72,7 @@
     </header>
     <main class="container">
         <div class="page-header">
-            <h1 class="page-title">📅 排班日历</h1>
-            <p class="page-desc">2026年4月24日 - 4月30日 北京车展Demo车辆排班情况</p>
-        </div>
-        <div class="legend">
-            <div class="legend-item"><div class="legend-color legend-available"></div><span>空闲可预约</span></div>
-            <div class="legend-item"><div class="legend-color legend-approved"></div><span>已确认</span></div>
-            <div class="legend-item"><div class="legend-color legend-pending"></div><span>待审批</span></div>
+            <h1 class="page-title">排班日历</h1>
         </div>
         <div class="stats-row" id="statsRow">
             <div class="stat-card stat-success"><div class="stat-value" id="availableSlots">0</div><div class="stat-label">空闲时段</div></div>
@@ -87,7 +82,7 @@
         </div>
         <div class="filters">
             <div class="filter-group"><span class="filter-label">时段筛选：</span><select class="filter-select" id="timeFilter"><option value="all">全部时段</option><option value="10:00-12:00">10:00-12:00</option><option value="14:00-16:00">14:00-16:00</option><option value="17:00-19:00">17:00-19:00</option></select></div>
-            <button class="btn btn-outline" id="refreshBtn">🔄 刷新数据</button>
+            <button class="btn btn-outline" id="refreshBtn">刷新数据</button>
         </div>
         <div class="schedule-card">
             <div class="schedule-table-wrapper">
@@ -166,27 +161,60 @@
                         const b = map[date.value + "_" + slot.value + "_车辆" + v];
                         if (b) items.push({ vehicle: v, booking: b });
                     }
+                    const avail = CONFIG.VEHICLE_COUNT - items.length;
+
                     if (items.length === 0) {
-                        body += "<td class='slot-available'><span style='font-weight:500;'>空闲</span><br><span style='font-size:0.7rem;'>可预约</span></td>";
-                    } else {
+                        // 全部空闲
+                        body += "<td class='slot-available' onclick=\"goToBooking('" + date.value + "', '" + slot.value + "')\"><span style='font-weight:500;'>空闲</span><br><span style='font-size:0.7rem;'>" + avail + "辆车可预约</span></td>";
+                    } else if (avail === 0) {
+                        // 约满，红色背景
                         let html = "";
                         items.forEach(s => {
                             const cls = s.booking.status === "approved" ? "slot-item-approved" : "slot-item-pending";
                             const txt = s.booking.status === "approved" ? "已确认" : "待审批";
                             let vehicleLabel = "车辆" + s.vehicle;
                             if (s.vehicle > CONFIG.MAIN_VEHICLE_COUNT) {
-                                vehicleLabel = "车辆" + s.vehicle + "（备选）";
+                                vehicleLabel = "车辆" + s.vehicle + "(备)";
                             }
                             html += "<div class='slot-item " + cls + "'><div style='font-weight:600;'>" + vehicleLabel + " · " + txt + "</div><div>" + s.booking.contactName + "，" + s.booking.passengerCount + "人，" + s.booking.companyName + "</div></div>";
                         });
-                        const avail = CONFIG.VEHICLE_COUNT - items.length;
-                        if (avail > 0) html += "<div class='slot-item' style='background:rgba(16,185,129,0.15);color:#065f46;'><div style='font-size:0.7rem;'>还有" + avail + "辆车可预约</div></div>";
-                        body += "<td>" + html + "</td>";
+                        body += "<td class='slot-full'>" + html + "</td>";
+                    } else if (avail <= 3) {
+                        // 还剩3辆或更少，黄色背景，可点击
+                        let html = "";
+                        items.forEach(s => {
+                            const cls = s.booking.status === "approved" ? "slot-item-approved" : "slot-item-pending";
+                            const txt = s.booking.status === "approved" ? "已确认" : "待审批";
+                            let vehicleLabel = "车辆" + s.vehicle;
+                            if (s.vehicle > CONFIG.MAIN_VEHICLE_COUNT) {
+                                vehicleLabel = "车辆" + s.vehicle + "(备)";
+                            }
+                            html += "<div class='slot-item " + cls + "'><div style='font-weight:600;'>" + vehicleLabel + " · " + txt + "</div><div>" + s.booking.contactName + "，" + s.booking.passengerCount + "人，" + s.booking.companyName + "</div></div>";
+                        });
+                        html += "<div class='slot-item' style='background:rgba(245,158,11,0.2);color:#92400e;'><div style='font-size:0.7rem;'>仅剩" + avail + "辆车</div></div>";
+                        body += "<td class='slot-warning' onclick=\"goToBooking('" + date.value + "', '" + slot.value + "')\">" + html + "</td>";
+                    } else {
+                        // 正常情况，绿色背景，可点击
+                        let html = "";
+                        items.forEach(s => {
+                            const cls = s.booking.status === "approved" ? "slot-item-approved" : "slot-item-pending";
+                            const txt = s.booking.status === "approved" ? "已确认" : "待审批";
+                            let vehicleLabel = "车辆" + s.vehicle;
+                            if (s.vehicle > CONFIG.MAIN_VEHICLE_COUNT) {
+                                vehicleLabel = "车辆" + s.vehicle + "(备)";
+                            }
+                            html += "<div class='slot-item " + cls + "'><div style='font-weight:600;'>" + vehicleLabel + " · " + txt + "</div><div>" + s.booking.contactName + "，" + s.booking.passengerCount + "人，" + s.booking.companyName + "</div></div>";
+                        });
+                        html += "<div class='slot-item' style='background:rgba(16,185,129,0.15);color:#065f46;'><div style='font-size:0.7rem;'>还有" + avail + "辆车可预约</div></div>";
+                        body += "<td class='slot-available' onclick=\"goToBooking('" + date.value + "', '" + slot.value + "')\">" + html + "</td>";
                     }
                 });
                 body += "</tr>";
             });
             document.getElementById("scheduleBody").innerHTML = body;
+        }
+        function goToBooking(date, timeSlot) {
+            window.location.href = "index.html?date=" + encodeURIComponent(date) + "&timeSlot=" + encodeURIComponent(timeSlot);
         }
         function updateStats() {
             const total = CONFIG.TIME_SLOTS.length * generateDateList().length * CONFIG.VEHICLE_COUNT;
