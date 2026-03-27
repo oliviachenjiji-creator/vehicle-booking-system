@@ -152,8 +152,7 @@
             ADMIN_PASSWORD: "admin123",
             DATE_RANGE: { start: "2026-04-24", end: "2026-04-30" },
             TIME_SLOTS: ["10:00-12:00", "14:00-16:00", "17:00-19:00"],
-            VEHICLE_COUNT: 8,
-            MAIN_VEHICLE_COUNT: 6
+            VEHICLE_COUNT: 6
         };
         let allBookings = [];
         let currentFilter = "all";
@@ -269,11 +268,7 @@
             // 生成车辆选项
             let options = "<option value=''>-- 选择车辆 --</option>";
             for (let i = 1; i <= CONFIG.VEHICLE_COUNT; i++) {
-                let label = "车辆" + i;
-                if (i > CONFIG.MAIN_VEHICLE_COUNT) {
-                    label = "车辆" + i + "（备选）";
-                }
-                options += "<option value='车辆" + i + "'" + (b.vehicleId === "车辆" + i ? " selected" : "") + ">" + label + "</option>";
+                options += "<option value='车辆" + i + "'" + (b.vehicleId === "车辆" + i ? " selected" : "") + ">车辆" + i + "</option>";
             }
             document.getElementById("vehicleSelect").innerHTML = options;
             document.getElementById("conflictWarning").classList.add("hidden");

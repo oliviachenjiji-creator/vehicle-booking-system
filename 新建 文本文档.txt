@@ -11,8 +11,7 @@ const CONFIG = {
     ROUTES: '线路配置',
     SYNC_LOG: '同步日志'
   },
-  VEHICLE_COUNT: 8,           // 总车辆数：6辆主车辆 + 2辆备选车
-  MAIN_VEHICLE_COUNT: 6,      // 主车辆数量，前6辆为主车辆，后2辆为备选车
+  VEHICLE_COUNT: 6
   DATE_RANGE: { start: '2026-04-24', end: '2026-04-30' }
 };
 
@@ -281,16 +280,8 @@ function assignVehicle(date, timeSlot) {
     }
   });
 
-  // 优先分配主车辆（1-6）
-  for (let i = 1; i <= CONFIG.MAIN_VEHICLE_COUNT; i++) {
-    const vehicleId = '车辆' + i;
-    if (!occupiedVehicles.has(vehicleId)) {
-      return vehicleId;
-    }
-  }
-
-  // 主车辆全部被占用，使用备选车（7-8）
-  for (let i = CONFIG.MAIN_VEHICLE_COUNT + 1; i <= CONFIG.VEHICLE_COUNT; i++) {
+  // 分配车辆
+  for (let i = 1; i <= CONFIG.VEHICLE_COUNT; i++) {
     const vehicleId = '车辆' + i;
     if (!occupiedVehicles.has(vehicleId)) {
       return vehicleId;

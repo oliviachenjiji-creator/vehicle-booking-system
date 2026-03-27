@@ -57,8 +57,7 @@ const CONFIG = {
   },
 
   // 车辆数量
-  VEHICLE_COUNT: 8,
-  MAIN_VEHICLE_COUNT: 6,  // 主车辆数量，前6辆为主车辆，后2辆为备选车
+  VEHICLE_COUNT: 6
 
   // 预约日期范围
   DATE_RANGE: {
@@ -817,16 +816,8 @@ function assignVehicle(date, timeSlot) {
     }
   });
 
-  // 优先分配主车辆（1-6），只有当主车辆全部被占用时才使用备选车（7-8）
-  for (let i = 1; i <= CONFIG.MAIN_VEHICLE_COUNT; i++) {
-    const vehicleId = '车辆' + i;
-    if (!occupiedVehicles.has(vehicleId)) {
-      return vehicleId;
-    }
-  }
-
-  // 主车辆全部被占用，使用备选车
-  for (let i = CONFIG.MAIN_VEHICLE_COUNT + 1; i <= CONFIG.VEHICLE_COUNT; i++) {
+  // 分配车辆
+  for (let i = 1; i <= CONFIG.VEHICLE_COUNT; i++) {
     const vehicleId = '车辆' + i;
     if (!occupiedVehicles.has(vehicleId)) {
       return vehicleId;
