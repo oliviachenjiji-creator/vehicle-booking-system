@@ -76,6 +76,14 @@ let tokenExpireTime = 0;
  * GET请求处理 - 支持JSONP绕过CORS
  */
 function doGet(e) {
+  // 防止直接运行测试时报错
+  if (!e || !e.parameter) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      message: '请通过URL参数调用此API，例如：?action=getAllBookings'
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
   const action = e.parameter.action;
   const callback = e.parameter.callback; // JSONP回调函数名
 
