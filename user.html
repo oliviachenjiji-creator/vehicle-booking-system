@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的预约 - 车辆预约系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --primary: #2563eb; --primary-dark: #1d4ed8; --success: #10b981; --warning: #f59e0b; --danger: #ef4444; --gray-50: #f9fafb; --gray-100: #f3f4f6; --gray-200: #e5e7eb; --gray-300: #d1d5db; --gray-400: #9ca3af; --gray-500: #6b7280; --gray-600: #4b5563; --gray-700: #374151; --gray-800: #1f2937; --shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--gray-50); color: var(--gray-800); line-height: 1.6; min-height: 100vh; }
+        .header { background: white; border-bottom: 1px solid var(--gray-200); padding: 1rem; position: sticky; top: 0; z-index: 100; }
+        .header-content { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+        .logo { font-size: 1.25rem; font-weight: 700; color: var(--primary); }
+        .nav-links { display: flex; gap: 1rem; }
+        .nav-links a { color: var(--gray-600); text-decoration: none; padding: 0.5rem 1rem; border-radius: 0.5rem; }
+        .nav-links a:hover, .nav-links a.active { background: var(--gray-100); color: var(--primary); }
+        .container { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
+        .form-card { background: white; border-radius: 1rem; box-shadow: var(--shadow); padding: 2rem; max-width: 600px; margin: 0 auto; }
+        .form-title { font-size: 1.5rem; font-weight: 600; margin-bottom: 1.5rem; }
+        .form-group { margin-bottom: 1.25rem; }
+        .form-label { display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--gray-700); }
+        .form-input { width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--gray-300); border-radius: 0.5rem; font-size: 1rem; }
+        .form-input:focus { outline: none; border-color: var(--primary); }
+        .btn { display: inline-flex; align-items: center; justify-content: center; padding: 0.75rem 1.5rem; border: none; border-radius: 0.5rem; font-size: 1rem; font-weight: 500; cursor: pointer; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-outline { background: white; border: 1px solid var(--gray-300); color: var(--gray-700); }
+        .btn-sm { padding: 0.5rem 1rem; font-size: 0.875rem; }
+        .btn-full { width: 100%; }
+        .toast { position: fixed; top: 1rem; right: 1rem; padding: 1rem 1.5rem; border-radius: 0.5rem; color: white; font-weight: 500; z-index: 1000; animation: slideIn 0.3s ease; }
+        .toast-success { background: var(--success); }
+        .toast-error { background: var(--danger); }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .booking-list { display: flex; flex-direction: column; gap: 1rem; margin-top: 1.5rem; }
+        .booking-card { background: white; border: 1px solid var(--gray-200); border-radius: 0.75rem; padding: 1.25rem; }
+        .booking-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem; }
+        .booking-company { font-weight: 600; font-size: 1.1rem; }
+        .booking-status { padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.75rem; font-weight: 500; }
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-approved { background: #d1fae5; color: #065f46; }
+        .status-rejected { background: #fee2e2; color: #991b1b; }
+        .status-cancelled { background: var(--gray-100); color: var(--gray-500); }
+        .booking-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.5rem; font-size: 0.9rem; color: var(--gray-600); margin-bottom: 1rem; }
+        .booking-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; padding-top: 0.75rem; border-top: 1px solid var(--gray-100); }
+        .empty-state { text-align: center; padding: 3rem 1rem; color: var(--gray-500); }
+        .spinner { width: 2rem; height: 2rem; border: 3px solid var(--gray-200); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading { display: flex; align-items: center; justify-content: center; padding: 2rem; }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
+        .modal-content { background: white; border-radius: 1rem; padding: 2rem; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .modal-title { font-size: 1.25rem; font-weight: 600; }
+        .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--gray-400); }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">🚗 智驾新程 - 车辆预约系统</div>
+            <nav class="nav-links">
+                <a href="index.html">预约申请</a>
+                <a href="user.html" class="active">我的预约</a>
+                <a href="schedule.html">排班日历</a>
+                <a href="admin.html">管理后台</a>
+            </nav>
+        </div>
+    </header>
+    <main class="container">
+        <div class="form-card">
+            <h1 class="form-title">🔍 查询我的预约</h1>
+            <div class="form-group">
+                <label class="form-label">请输入您的手机号码</label>
+                <input type="tel" class="form-input" id="phoneInput" placeholder="请输入预约时填写的手机号" maxlength="11">
+            </div>
+            <button class="btn btn-primary btn-full" id="searchBtn">查询预约</button>
+            <div class="booking-list" id="bookingList"></div>
+        </div>
+    </main>
+    <script>
+        const CONFIG = { API_URL: "YOUR_GOOGLE_APPS_SCRIPT_URL" };
+        function showToast(msg, type) { const t = document.createElement("div"); t.className = "toast toast-" + type; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3000); }
+        function formatDate(d) { const date = new Date(d); return (date.getMonth() + 1) + "月" + date.getDate() + "日 " + ["周日","周一","周二","周三","周四","周五","周六"][date.getDay()]; }
+        function getStatusText(s) { return { pending: "待审批", approved: "已通过", rejected: "已拒绝", cancelled: "已取消" }[s] || s; }
+        async function searchBookings() {
+            const phone = document.getElementById("phoneInput").value.trim();
+            if (!phone || !/^\d{11}$/.test(phone)) { showToast("请输入正确的手机号码", "error"); return; }
+            const list = document.getElementById("bookingList");
+            list.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            try {
+                const res = await fetch(CONFIG.API_URL + "?action=getUserBookings&phone=" + phone);
+                const r = await res.json();
+                if (r.success && r.data.length > 0) renderBookingList(r.data);
+                else list.innerHTML = '<div class="empty-state"><p>未找到预约记录</p><p style="font-size:0.875rem;margin-top:0.5rem;">请确认手机号是否正确</p></div>';
+            } catch (err) { list.innerHTML = '<p style="text-align:center;color:var(--danger);">查询失败，请稍后重试</p>'; }
+        }
+        function renderBookingList(bookings) {
+            const c = document.getElementById("bookingList");
+            c.innerHTML = bookings.map(b => '<div class="booking-card"><div class="booking-header"><span class="booking-company">' + b.companyName + '</span><span class="booking-status status-' + b.status + '">' + getStatusText(b.status) + '</span></div><div class="booking-details"><div><strong>日期:</strong> ' + formatDate(b.bookingDate) + '</div><div><strong>时段:</strong> ' + b.timeSlot + '</div><div><strong>线路:</strong> ' + b.demoRoute + '</div><div><strong>人数:</strong> ' + b.passengerCount + '人</div><div><strong>语言:</strong> ' + b.vehicleLanguage + '</div><div><strong>车辆:</strong> ' + (b.vehicleId || "待分配") + '</div>' + (b.remarks ? '<div><strong>备注:</strong> ' + b.remarks + '</div>' : '') + (b.rejectReason ? '<div style="color:var(--danger);"><strong>拒绝原因:</strong> ' + b.rejectReason + '</div>' : '') + '</div>' + (b.status === "pending" ? '<div class="booking-actions"><button class="btn btn-outline btn-sm" onclick="cancelBooking(\'' + b.id + '\')">取消预约</button></div>' : '') + '</div>').join("");
+        }
+        async function cancelBooking(id) {
+            if (!confirm("确定要取消此预约吗？")) return;
+            try {
+                const res = await fetch(CONFIG.API_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "cancelBooking", bookingId: id }) });
+                const r = await res.json();
+                if (r.success) { showToast("已取消预约", "success"); searchBookings(); }
+                else showToast(r.message || "取消失败", "error");
+            } catch (err) { showToast("网络错误", "error"); }
+        }
+        document.addEventListener("DOMContentLoaded", () => {
+            document.getElementById("searchBtn").addEventListener("click", searchBookings);
+            document.getElementById("phoneInput").addEventListener("keypress", e => { if (e.key === "Enter") searchBookings(); });
+        });
+    </script>
+</body>
+</html>

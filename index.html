@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>车辆预约系统 - 智驾新程</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --primary: #2563eb; --primary-dark: #1d4ed8; --success: #10b981; --warning: #f59e0b; --danger: #ef4444; --gray-50: #f9fafb; --gray-100: #f3f4f6; --gray-200: #e5e7eb; --gray-300: #d1d5db; --gray-400: #9ca3af; --gray-500: #6b7280; --gray-600: #4b5563; --gray-700: #374151; --gray-800: #1f2937; --shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--gray-50); color: var(--gray-800); line-height: 1.6; min-height: 100vh; }
+        .header { background: white; border-bottom: 1px solid var(--gray-200); padding: 1rem; position: sticky; top: 0; z-index: 100; }
+        .header-content { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+        .logo { font-size: 1.25rem; font-weight: 700; color: var(--primary); }
+        .nav-links { display: flex; gap: 1rem; }
+        .nav-links a { color: var(--gray-600); text-decoration: none; padding: 0.5rem 1rem; border-radius: 0.5rem; }
+        .nav-links a:hover, .nav-links a.active { background: var(--gray-100); color: var(--primary); }
+        .container { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
+        .form-card { background: white; border-radius: 1rem; box-shadow: var(--shadow); padding: 2rem; max-width: 600px; margin: 0 auto; }
+        .form-title { font-size: 1.5rem; font-weight: 600; margin-bottom: 1.5rem; }
+        .form-group { margin-bottom: 1.25rem; }
+        .form-label { display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--gray-700); }
+        .form-label .required { color: var(--danger); }
+        .form-input, .form-select, .form-textarea { width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--gray-300); border-radius: 0.5rem; font-size: 1rem; }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+        .form-hint { font-size: 0.875rem; color: var(--gray-500); margin-top: 0.25rem; }
+        .radio-group { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+        .radio-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border: 1px solid var(--gray-300); border-radius: 0.5rem; cursor: pointer; }
+        .radio-item:hover { border-color: var(--primary); background: var(--gray-50); }
+        .radio-item.selected { border-color: var(--primary); background: rgba(37, 99, 235, 0.05); }
+        .btn { display: inline-flex; align-items: center; justify-content: center; padding: 0.75rem 1.5rem; border: none; border-radius: 0.5rem; font-size: 1rem; font-weight: 500; cursor: pointer; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-full { width: 100%; }
+        .toast { position: fixed; top: 1rem; right: 1rem; padding: 1rem 1.5rem; border-radius: 0.5rem; color: white; font-weight: 500; z-index: 1000; animation: slideIn 0.3s ease; }
+        .toast-success { background: var(--success); }
+        .toast-error { background: var(--danger); }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .date-tabs { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        .date-tab { padding: 0.5rem 1rem; border: 1px solid var(--gray-300); border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem; background: white; }
+        .date-tab:hover { border-color: var(--primary); }
+        .date-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .spinner { width: 1rem; height: 1rem; border: 2px solid var(--gray-200); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 768px) { .header-content { flex-direction: column; } .radio-group { flex-direction: column; } .radio-item { width: 100%; } }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">🚗 智驾新程 - 车辆预约系统</div>
+            <nav class="nav-links">
+                <a href="index.html" class="active">预约申请</a>
+                <a href="user.html">我的预约</a>
+                <a href="schedule.html">排班日历</a>
+                <a href="admin.html">管理后台</a>
+            </nav>
+        </div>
+    </header>
+    <main class="container">
+        <div class="form-card">
+            <h1 class="form-title">📝 车辆Demo预约申请</h1>
+            <form id="bookingForm">
+                <div class="form-group"><label class="form-label">预约日期 <span class="required">*</span></label><div class="date-tabs" id="dateTabs"></div><input type="hidden" id="bookingDate" required></div>
+                <div class="form-group"><label class="form-label">预约时段 <span class="required">*</span></label><div class="radio-group" id="timeSlots"></div><input type="hidden" id="timeSlot" required></div>
+                <div class="form-group"><label class="form-label">Demo线路 <span class="required">*</span></label><div class="radio-group" id="routeOptions"></div><input type="hidden" id="demoRoute" required></div>
+                <div class="form-group"><label class="form-label">客户公司名称 <span class="required">*</span></label><input type="text" class="form-input" id="companyName" required placeholder="请输入公司名称"></div>
+                <div class="form-group"><label class="form-label">上车人数 <span class="required">*</span></label><select class="form-select" id="passengerCount" required><option value="">请选择人数</option><option value="1">1人</option><option value="2">2人</option><option value="3">3人（含讲解专家最多）</option></select><p class="form-hint">包含讲解专家在内最多3人</p></div>
+                <div class="form-group"><label class="form-label">车辆语言 <span class="required">*</span></label><div class="radio-group" id="languageOptions"></div><input type="hidden" id="vehicleLanguage" required></div>
+                <div class="form-group"><label class="form-label">对接人姓名 <span class="required">*</span></label><input type="text" class="form-input" id="contactName" required placeholder="请输入对接人姓名"></div>
+                <div class="form-group"><label class="form-label">对接人电话 <span class="required">*</span></label><input type="tel" class="form-input" id="contactPhone" required placeholder="请输入手机号码" maxlength="11"><p class="form-hint">用于查询预约状态，请准确填写</p></div>
+                <div class="form-group"><label class="form-label">备注</label><textarea class="form-textarea" id="remarks" placeholder="如有特殊需求请备注说明"></textarea></div>
+                <button type="submit" class="btn btn-primary btn-full" id="submitBtn">提交预约申请</button>
+            </form>
+            <p style="text-align:center;margin-top:1.5rem;color:var(--gray-500);">查看<a href="schedule.html" style="color:var(--primary);">排班日历</a>了解各时段预约情况</p>
+        </div>
+    </main>
+    <script>
+        const CONFIG = {
+            API_URL: "YOUR_GOOGLE_APPS_SCRIPT_URL",
+            DATE_RANGE: { start: "2026-04-23", end: "2026-04-30" },
+            TIME_SLOTS: [{ value: "10:00-12:00", label: "10:00 - 12:00" }, { value: "14:00-16:00", label: "14:00 - 16:00" }, { value: "17:00-19:00", label: "17:00 - 19:00" }],
+            DEMO_ROUTES: [{ value: "顺义短线路1", label: "顺义短线路1" }, { value: "顺义短线路2", label: "顺义短线路2" }],
+            LANGUAGES: [{ value: "中文", label: "中文" }, { value: "英文", label: "英文" }]
+        };
+        function generateDateList() { const dates = []; const start = new Date(CONFIG.DATE_RANGE.start); const end = new Date(CONFIG.DATE_RANGE.end); while (start <= end) { const date = new Date(start); const weekDay = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][date.getDay()]; dates.push({ value: date.toISOString().split("T")[0], label: (date.getMonth() + 1) + "/" + date.getDate() + " " + weekDay }); start.setDate(start.getDate() + 1); } return dates; }
+        function showToast(message, type) { const toast = document.createElement("div"); toast.className = "toast toast-" + type; toast.textContent = message; document.body.appendChild(toast); setTimeout(() => toast.remove(), 3000); }
+        function setLoading(btn, loading) { if (loading) { btn.disabled = true; btn.dataset.orig = btn.textContent; btn.innerHTML = '<span class="spinner" style="margin-right:0.5rem;"></span>提交中...'; } else { btn.disabled = false; btn.textContent = btn.dataset.orig || "提交预约申请"; } }
+        function initDateTabs() { const c = document.getElementById("dateTabs"); c.innerHTML = generateDateList().map(d => '<button type="button" class="date-tab" data-value="' + d.value + '">' + d.label + '</button>').join(""); c.querySelectorAll(".date-tab").forEach(t => t.addEventListener("click", () => { c.querySelectorAll(".date-tab").forEach(x => x.classList.remove("active")); t.classList.add("active"); document.getElementById("bookingDate").value = t.dataset.value; })); }
+        function initRadio(cid, opts, hid) { const c = document.getElementById(cid); c.innerHTML = opts.map(o => '<label class="radio-item" data-value="' + o.value + '"><input type="radio" value="' + o.value + '"><span>' + o.label + '</span></label>').join(""); c.querySelectorAll(".radio-item").forEach(i => i.addEventListener("click", () => { c.querySelectorAll(".radio-item").forEach(x => x.classList.remove("selected")); i.classList.add("selected"); i.querySelector("input").checked = true; document.getElementById(hid).value = i.dataset.value; })); }
+        async function handleSubmit(e) {
+            e.preventDefault();
+            const btn = document.getElementById("submitBtn");
+            const fd = { bookingDate: document.getElementById("bookingDate").value, timeSlot: document.getElementById("timeSlot").value, demoRoute: document.getElementById("demoRoute").value, companyName: document.getElementById("companyName").value.trim(), passengerCount: document.getElementById("passengerCount").value, vehicleLanguage: document.getElementById("vehicleLanguage").value, contactName: document.getElementById("contactName").value.trim(), contactPhone: document.getElementById("contactPhone").value.trim(), remarks: document.getElementById("remarks").value.trim() };
+            const req = { bookingDate: "预约日期", timeSlot: "预约时段", demoRoute: "Demo线路", companyName: "客户公司名称", passengerCount: "上车人数", vehicleLanguage: "车辆语言", contactName: "对接人姓名", contactPhone: "对接人电话" };
+            for (const [f, l] of Object.entries(req)) if (!fd[f]) { showToast("请选择" + l, "error"); return; }
+            if (!/^\d{11}$/.test(fd.contactPhone)) { showToast("请输入正确的手机号码", "error"); return; }
+            setLoading(btn, true);
+            try {
+                const res = await fetch(CONFIG.API_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "createBooking", data: fd }) });
+                const r = await res.json();
+                if (r.success) { showToast("预约申请已提交，请等待审批", "success"); document.getElementById("bookingForm").reset(); document.querySelectorAll(".radio-item").forEach(i => i.classList.remove("selected")); document.querySelectorAll(".date-tab").forEach(t => t.classList.remove("active")); }
+                else showToast(r.message || "提交失败", "error");
+            } catch (err) { console.error(err); showToast("网络错误，请稍后重试", "error"); }
+            finally { setLoading(btn, false); }
+        }
+        document.addEventListener("DOMContentLoaded", () => { initDateTabs(); initRadio("timeSlots", CONFIG.TIME_SLOTS, "timeSlot"); initRadio("routeOptions", CONFIG.DEMO_ROUTES, "demoRoute"); initRadio("languageOptions", CONFIG.LANGUAGES, "vehicleLanguage"); document.getElementById("bookingForm").addEventListener("submit", handleSubmit); });
+    </script>
+</body>
+</html>
