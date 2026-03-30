@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的预约 - 车辆预约系统</title>
+    <title>我的预约 - Luna预约系统</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root { --primary: #2563eb; --primary-dark: #1d4ed8; --success: #10b981; --warning: #f59e0b; --danger: #ef4444; --gray-50: #f9fafb; --gray-100: #f3f4f6; --gray-200: #e5e7eb; --gray-300: #d1d5db; --gray-400: #9ca3af; --gray-500: #6b7280; --gray-600: #4b5563; --gray-700: #374151; --gray-800: #1f2937; --shadow: 0 1px 3px rgba(0,0,0,0.1); }
@@ -66,12 +66,11 @@
 <body>
     <header class="header">
         <div class="header-content">
-            <div class="logo">智驾新程 - 车辆预约系统</div>
+            <div class="logo">智驾新程 - Luna预约系统</div>
             <nav class="nav-links">
-                <a href="index.html">预约申请</a>
-                <a href="user.html" class="active">我的预约</a>
-                <a href="schedule.html">排班日历</a>
-                <a href="admin.html">管理后台</a>
+                <a href="luna-index.html">预约申请</a>
+                <a href="luna-user.html" class="active">我的预约</a>
+                <a href="luna-schedule.html">排班日历</a>
             </nav>
         </div>
     </header>
@@ -87,38 +86,52 @@
         </div>
     </main>
     <script>
-        const CONFIG = {
+        var CONFIG = {
             API_URL: "https://script.google.com/macros/s/AKfycbyyLi44_nTE5AlDf4hfOAileeMoIyn-Jyz7aDf5UjsRMM8nA71b9XiSFDqXgZ9uIF46/exec",
-            SYSTEM_TYPE: "astra"
+            SYSTEM_TYPE: "luna"
         };
-        function showToast(msg, type) { const t = document.createElement("div"); t.className = "toast toast-" + type; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3000); }
-        function formatDate(d) { const date = new Date(d); return (date.getMonth() + 1) + "月" + date.getDate() + "日 " + ["周日","周一","周二","周三","周四","周五","周六"][date.getDay()]; }
+        function showToast(msg, type) { var t = document.createElement("div"); t.className = "toast toast-" + type; t.textContent = msg; document.body.appendChild(t); setTimeout(function() { t.remove(); }, 3000); }
+        function formatDate(d) { var date = new Date(d); return (date.getMonth() + 1) + "月" + date.getDate() + "日 " + ["周日","周一","周二","周三","周四","周五","周六"][date.getDay()]; }
         function getStatusText(s) { return { pending: "待审批", approved: "已通过", rejected: "已拒绝", cancelled: "已取消" }[s] || s; }
 
-        // JSONP请求函数
-        let jsonpCounter = 0;
+        var jsonpCounter = 0;
         function jsonpRequest(params, callback) {
-            const callbackName = 'jsonp_callback_' + (++jsonpCounter);
+            jsonpCounter++;
+            var callbackName = 'jsonp_callback_' + jsonpCounter;
             window[callbackName] = function(response) {
                 callback(response);
-                delete window[callbackName];
-                document.body.removeChild(script);
+                try { delete window[callbackName]; } catch(e) { window[callbackName] = undefined; }
+                if (script.parentNode) {
+                    script.parentNode.removeChild(script);
+                }
             };
-            const query = Object.keys(params).map(k => encodeURIComponent(k) + '=' + encodeURIComponent(typeof params[k] === 'object' ? JSON.stringify(params[k]) : params[k])).join('&');
-            const script = document.createElement('script');
+            var queryParts = [];
+            for (var key in params) {
+                if (params.hasOwnProperty(key)) {
+                    var val = params[key];
+                    if (typeof val === 'object') {
+                        val = JSON.stringify(val);
+                    }
+                    queryParts.push(encodeURIComponent(key) + '=' + encodeURIComponent(val));
+                }
+            }
+            var query = queryParts.join('&');
+            var script = document.createElement('script');
             script.src = CONFIG.API_URL + '?callback=' + callbackName + '&' + query;
             script.onerror = function() {
                 callback({ success: false, message: '网络请求失败' });
-                delete window[callbackName];
-                document.body.removeChild(script);
+                try { delete window[callbackName]; } catch(e) { window[callbackName] = undefined; }
+                if (script.parentNode) {
+                    script.parentNode.removeChild(script);
+                }
             };
             document.body.appendChild(script);
         }
 
         function searchBookings() {
-            const phone = document.getElementById("phoneInput").value.trim();
+            var phone = document.getElementById("phoneInput").value.trim();
             if (!phone || !/^\d{11}$/.test(phone)) { showToast("请输入正确的手机号码", "error"); return; }
-            const list = document.getElementById("bookingList");
+            var list = document.getElementById("bookingList");
             list.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
             jsonpRequest({ action: "getUserBookings", phone: phone, systemType: CONFIG.SYSTEM_TYPE }, function(r) {
                 if (r.success && r.data.length > 0) renderBookingList(r.data);
@@ -126,8 +139,10 @@
             });
         }
         function renderBookingList(bookings) {
-            const c = document.getElementById("bookingList");
-            c.innerHTML = bookings.map(b => '<div class="booking-card"><div class="booking-header"><span class="booking-company">' + b.companyName + '</span><span class="booking-status status-' + b.status + '">' + getStatusText(b.status) + '</span></div><div class="booking-details"><div><strong>日期:</strong> ' + formatDate(b.bookingDate) + '</div><div><strong>时段:</strong> ' + b.timeSlot + '</div><div><strong>线路:</strong> ' + b.demoRoute + '</div><div><strong>人数:</strong> ' + b.passengerCount + '人</div><div><strong>语言:</strong> ' + b.vehicleLanguage + '</div><div><strong>车辆:</strong> ' + (b.vehicleId || "待分配") + '</div>' + (b.remarks ? '<div><strong>备注:</strong> ' + b.remarks + '</div>' : '') + (b.rejectReason ? '<div style="color:var(--danger);"><strong>拒绝原因:</strong> ' + b.rejectReason + '</div>' : '') + '</div>' + (b.status === "pending" ? '<div class="booking-actions"><button class="btn btn-outline btn-sm" onclick="cancelBooking(\'' + b.id + '\')">取消预约</button></div>' : '') + '</div>').join("");
+            var c = document.getElementById("bookingList");
+            c.innerHTML = bookings.map(function(b) {
+                return '<div class="booking-card"><div class="booking-header"><span class="booking-company">' + b.companyName + '</span><span class="booking-status status-' + b.status + '">' + getStatusText(b.status) + '</span></div><div class="booking-details"><div><strong>日期:</strong> ' + formatDate(b.bookingDate) + '</div><div><strong>时段:</strong> ' + b.timeSlot + '</div><div><strong>线路:</strong> ' + b.demoRoute + '</div><div><strong>人数:</strong> ' + b.passengerCount + '人</div><div><strong>语言:</strong> ' + b.vehicleLanguage + '</div><div><strong>车辆:</strong> ' + (b.vehicleId || "待分配") + '</div>' + (b.remarks ? '<div><strong>备注:</strong> ' + b.remarks + '</div>' : '') + (b.rejectReason ? '<div style="color:var(--danger);"><strong>拒绝原因:</strong> ' + b.rejectReason + '</div>' : '') + '</div>' + (b.status === "pending" ? '<div class="booking-actions"><button class="btn btn-outline btn-sm" onclick="cancelBooking(\'' + b.id + '\')">取消预约</button></div>' : '') + '</div>';
+            }).join("");
         }
         function cancelBooking(id) {
             if (!confirm("确定要取消此预约吗？")) return;
@@ -136,9 +151,9 @@
                 else showToast(r.message || "取消失败", "error");
             });
         }
-        document.addEventListener("DOMContentLoaded", () => {
+        document.addEventListener("DOMContentLoaded", function() {
             document.getElementById("searchBtn").addEventListener("click", searchBookings);
-            document.getElementById("phoneInput").addEventListener("keypress", e => { if (e.key === "Enter") searchBookings(); });
+            document.getElementById("phoneInput").addEventListener("keypress", function(e) { if (e.key === "Enter") searchBookings(); });
         });
     </script>
 </body>

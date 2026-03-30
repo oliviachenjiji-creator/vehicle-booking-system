@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>排班日历 - 车辆预约系统</title>
+    <title>排班日历 - Luna预约系统</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root { --primary: #2563eb; --primary-dark: #1d4ed8; --success: #10b981; --warning: #f59e0b; --danger: #ef4444; --gray-50: #f9fafb; --gray-100: #f3f4f6; --gray-200: #e5e7eb; --gray-300: #d1d5db; --gray-400: #9ca3af; --gray-500: #6b7280; --gray-600: #4b5563; --gray-700: #374151; --gray-800: #1f2937; --shadow: 0 1px 3px rgba(0,0,0,0.1); }
@@ -61,12 +61,11 @@
 <body>
     <header class="header">
         <div class="header-content">
-            <div class="logo">智驾新程 - 车辆预约系统</div>
+            <div class="logo">智驾新程 - Luna预约系统</div>
             <nav class="nav-links">
-                <a href="index.html">预约申请</a>
-                <a href="user.html">我的预约</a>
-                <a href="schedule.html" class="active">排班日历</a>
-                <a href="admin.html">管理后台</a>
+                <a href="luna-index.html">预约申请</a>
+                <a href="luna-user.html">我的预约</a>
+                <a href="luna-schedule.html" class="active">排班日历</a>
             </nav>
         </div>
     </header>
@@ -92,22 +91,22 @@
         </div>
     </main>
     <script>
-        const CONFIG = {
+        var CONFIG = {
             API_URL: "https://script.google.com/macros/s/AKfycbyyLi44_nTE5AlDf4hfOAileeMoIyn-Jyz7aDf5UjsRMM8nA71b9XiSFDqXgZ9uIF46/exec",
-            SYSTEM_TYPE: "astra",
+            SYSTEM_TYPE: "luna",
             DATE_RANGE: { start: "2026-04-24", end: "2026-04-30" },
             TIME_SLOTS: [{ value: "10:00-12:00", label: "10:00-12:00" }, { value: "14:00-16:00", label: "14:00-16:00" }, { value: "17:00-19:00", label: "17:00-19:00" }],
-            VEHICLE_COUNT: 6
+            VEHICLE_COUNT: 2
         };
-        let allBookings = [];
+        var allBookings = [];
 
         function generateDateList() {
-            const dates = [];
-            const start = new Date(CONFIG.DATE_RANGE.start);
-            const end = new Date(CONFIG.DATE_RANGE.end);
+            var dates = [];
+            var start = new Date(CONFIG.DATE_RANGE.start);
+            var end = new Date(CONFIG.DATE_RANGE.end);
             while (start <= end) {
-                const date = new Date(start);
-                const weekDay = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][date.getDay()];
+                var date = new Date(start);
+                var weekDay = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][date.getDay()];
                 dates.push({ value: date.toISOString().split("T")[0], label: (date.getMonth() + 1) + "/" + date.getDate(), weekDay: weekDay });
                 start.setDate(start.getDate() + 1);
             }
@@ -115,25 +114,22 @@
         }
 
         function showToast(msg) {
-            const t = document.createElement("div");
+            var t = document.createElement("div");
             t.className = "toast toast-error";
             t.textContent = msg;
             document.body.appendChild(t);
-            setTimeout(() => t.remove(), 3000);
+            setTimeout(function() { t.remove(); }, 3000);
         }
 
-        // 标准化日期格式
         function normalizeDate(dateVal) {
             if (!dateVal) return "";
             if (dateVal instanceof Date) {
                 return dateVal.toISOString().split('T')[0];
             }
             if (typeof dateVal === 'string') {
-                // 处理各种日期格式
                 if (dateVal.includes('T')) {
                     return dateVal.split('T')[0];
                 }
-                // 已经是 yyyy-MM-dd 格式
                 if (/^\d{4}-\d{2}-\d{2}$/.test(dateVal)) {
                     return dateVal;
                 }
@@ -141,29 +137,43 @@
             return String(dateVal);
         }
 
-        // JSONP请求函数
-        let jsonpCounter = 0;
+        var jsonpCounter = 0;
         function jsonpRequest(params, callback) {
-            const callbackName = 'jsonp_callback_' + (++jsonpCounter);
+            jsonpCounter++;
+            var callbackName = 'jsonp_callback_' + jsonpCounter;
             window[callbackName] = function(response) {
                 callback(response);
-                delete window[callbackName];
-                document.body.removeChild(script);
+                try { delete window[callbackName]; } catch(e) { window[callbackName] = undefined; }
+                if (script.parentNode) {
+                    script.parentNode.removeChild(script);
+                }
             };
-            const query = Object.keys(params).map(k => encodeURIComponent(k) + '=' + encodeURIComponent(typeof params[k] === 'object' ? JSON.stringify(params[k]) : params[k])).join('&');
-            const script = document.createElement('script');
+            var queryParts = [];
+            for (var key in params) {
+                if (params.hasOwnProperty(key)) {
+                    var val = params[key];
+                    if (typeof val === 'object') {
+                        val = JSON.stringify(val);
+                    }
+                    queryParts.push(encodeURIComponent(key) + '=' + encodeURIComponent(val));
+                }
+            }
+            var query = queryParts.join('&');
+            var script = document.createElement('script');
             script.src = CONFIG.API_URL + '?callback=' + callbackName + '&' + query;
             script.onerror = function() {
                 callback({ success: false, message: '网络请求失败' });
-                delete window[callbackName];
-                document.body.removeChild(script);
+                try { delete window[callbackName]; } catch(e) { window[callbackName] = undefined; }
+                if (script.parentNode) {
+                    script.parentNode.removeChild(script);
+                }
             };
             document.body.appendChild(script);
         }
 
         function loadSchedule() {
-            const loading = document.getElementById("scheduleLoading");
-            const table = document.getElementById("scheduleTable");
+            var loading = document.getElementById("scheduleLoading");
+            var table = document.getElementById("scheduleTable");
             loading.style.display = "flex";
             table.style.display = "none";
             jsonpRequest({ action: "getSchedule", start: CONFIG.DATE_RANGE.start, end: CONFIG.DATE_RANGE.end, systemType: CONFIG.SYSTEM_TYPE }, function(r) {
@@ -182,59 +192,52 @@
         }
 
         function renderScheduleTable() {
-            const dates = generateDateList();
-            const timeFilter = document.getElementById("timeFilter").value;
-            const slots = timeFilter === "all" ? CONFIG.TIME_SLOTS : CONFIG.TIME_SLOTS.filter(s => s.value === timeFilter);
+            var dates = generateDateList();
+            var timeFilter = document.getElementById("timeFilter").value;
+            var slots = timeFilter === "all" ? CONFIG.TIME_SLOTS : CONFIG.TIME_SLOTS.filter(function(s) { return s.value === timeFilter; });
 
-            // 构建预约映射：key = "日期_时段_车辆ID"
-            const map = {};
-            allBookings.forEach(b => {
-                const dateStr = normalizeDate(b.bookingDate);
-                const key = dateStr + "_" + b.timeSlot + "_" + b.vehicleId;
+            var map = {};
+            allBookings.forEach(function(b) {
+                var dateStr = normalizeDate(b.bookingDate);
+                var key = dateStr + "_" + b.timeSlot + "_" + b.vehicleId;
                 if (b.vehicleId) {
                     map[key] = b;
                 }
             });
 
-            document.getElementById("scheduleHead").innerHTML = "<tr><th>时段</th>" + dates.map(d => "<th>" + d.label + "<br><span style='font-weight:normal;font-size:0.75rem;color:var(--gray-500);'>" + d.weekDay + "</span></th>").join("") + "</tr>";
+            document.getElementById("scheduleHead").innerHTML = "<tr><th>时段</th>" + dates.map(function(d) { return "<th>" + d.label + "<br><span style='font-weight:normal;font-size:0.75rem;color:var(--gray-500);'>" + d.weekDay + "</span></th>"; }).join("") + "</tr>";
 
-            let body = "";
-            slots.forEach(slot => {
+            var body = "";
+            slots.forEach(function(slot) {
                 body += "<tr><th>" + slot.label + "</th>";
-                dates.forEach(date => {
-                    // 收集该日期时段的所有预约
-                    let items = [];
-                    for (let v = 1; v <= CONFIG.VEHICLE_COUNT; v++) {
-                        const vehicleId = "Astra车辆" + v;
-                        const key = date.value + "_" + slot.value + "_" + vehicleId;
-                        const b = map[key];
+                dates.forEach(function(date) {
+                    var items = [];
+                    for (var v = 1; v <= CONFIG.VEHICLE_COUNT; v++) {
+                        var vehicleId = "Luna车辆" + v;
+                        var key = date.value + "_" + slot.value + "_" + vehicleId;
+                        var b = map[key];
                         if (b) {
                             items.push({ vehicle: v, booking: b });
                         }
                     }
 
-                    const avail = CONFIG.VEHICLE_COUNT - items.length;
+                    var avail = CONFIG.VEHICLE_COUNT - items.length;
 
                     if (items.length === 0) {
-                        // 全部空闲
                         body += "<td class='slot-available' onclick=\"goToBooking('" + date.value + "', '" + slot.value + "')\"><span style='font-weight:500;'>空闲</span><br><span style='font-size:0.7rem;'>" + avail + "辆车可预约</span></td>";
                     } else if (avail === 0) {
-                        // 约满，红色背景
-                        let html = "";
-                        items.forEach(s => {
+                        var html = "";
+                        items.forEach(function(s) {
                             if (s.booking.status === "approved") {
-                                // 已审批：蓝色背景，格式：车辆X·对接人·公司·人数
                                 html += "<div class='slot-item slot-item-approved' style='background:#3b82f6;color:white;'><div style='font-weight:500;'>车辆" + s.vehicle + "·" + s.booking.contactName + "·" + s.booking.companyName + "·" + s.booking.passengerCount + "人</div></div>";
                             } else {
-                                // 待审批
                                 html += "<div class='slot-item slot-item-pending'><div style='font-weight:500;'>车辆" + s.vehicle + " · 待审批</div><div>" + s.booking.contactName + "，" + s.booking.passengerCount + "人，" + s.booking.companyName + "</div></div>";
                             }
                         });
                         body += "<td class='slot-full'>" + html + "</td>";
-                    } else if (avail <= 3) {
-                        // 还剩3辆或更少，黄色背景，可点击
-                        let html = "";
-                        items.forEach(s => {
+                    } else if (avail <= 1) {
+                        var html = "";
+                        items.forEach(function(s) {
                             if (s.booking.status === "approved") {
                                 html += "<div class='slot-item slot-item-approved' style='background:#3b82f6;color:white;'><div style='font-weight:500;'>车辆" + s.vehicle + "·" + s.booking.contactName + "·" + s.booking.companyName + "·" + s.booking.passengerCount + "人</div></div>";
                             } else {
@@ -244,9 +247,8 @@
                         html += "<div class='slot-item' style='background:rgba(245,158,11,0.2);color:#92400e;'><div style='font-size:0.7rem;'>仅剩" + avail + "辆车</div></div>";
                         body += "<td class='slot-warning' onclick=\"goToBooking('" + date.value + "', '" + slot.value + "')\">" + html + "</td>";
                     } else {
-                        // 正常情况，绿色背景，可点击
-                        let html = "";
-                        items.forEach(s => {
+                        var html = "";
+                        items.forEach(function(s) {
                             if (s.booking.status === "approved") {
                                 html += "<div class='slot-item slot-item-approved' style='background:#3b82f6;color:white;'><div style='font-weight:500;'>车辆" + s.vehicle + "·" + s.booking.contactName + "·" + s.booking.companyName + "·" + s.booking.passengerCount + "人</div></div>";
                             } else {
@@ -263,20 +265,20 @@
         }
 
         function goToBooking(date, timeSlot) {
-            window.location.href = "index.html?date=" + encodeURIComponent(date) + "&timeSlot=" + encodeURIComponent(timeSlot);
+            window.location.href = "luna-index.html?date=" + encodeURIComponent(date) + "&timeSlot=" + encodeURIComponent(timeSlot);
         }
 
         function updateStats() {
-            const total = CONFIG.TIME_SLOTS.length * generateDateList().length * CONFIG.VEHICLE_COUNT;
-            const approved = allBookings.filter(b => b.status === "approved").length;
-            const pending = allBookings.filter(b => b.status === "pending").length;
+            var total = CONFIG.TIME_SLOTS.length * generateDateList().length * CONFIG.VEHICLE_COUNT;
+            var approved = allBookings.filter(function(b) { return b.status === "approved"; }).length;
+            var pending = allBookings.filter(function(b) { return b.status === "pending"; }).length;
             document.getElementById("availableSlots").textContent = total - approved - pending;
             document.getElementById("approvedSlots").textContent = approved;
             document.getElementById("pendingSlots").textContent = pending;
             document.getElementById("totalBookings").textContent = allBookings.length;
         }
 
-        document.addEventListener("DOMContentLoaded", () => {
+        document.addEventListener("DOMContentLoaded", function() {
             loadSchedule();
             document.getElementById("timeFilter").addEventListener("change", renderScheduleTable);
             document.getElementById("refreshBtn").addEventListener("click", loadSchedule);

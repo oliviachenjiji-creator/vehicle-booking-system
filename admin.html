@@ -112,6 +112,11 @@
             <div class="table-header">
                 <h2 class="table-title">预约列表</h2>
                 <div class="table-filters">
+                    <button class="filter-btn active" data-system="all">全部系统</button>
+                    <button class="filter-btn" data-system="astra">Astra</button>
+                    <button class="filter-btn" data-system="luna">Luna</button>
+                </div>
+                <div class="table-filters">
                     <button class="filter-btn active" data-filter="all">全部</button>
                     <button class="filter-btn" data-filter="pending">待审批</button>
                     <button class="filter-btn" data-filter="approved">已通过</button>
@@ -119,7 +124,7 @@
                 </div>
             </div>
             <div class="table-container">
-                <table><thead><tr><th>提交时间</th><th>预约日期</th><th>时段</th><th>线路</th><th>泊车</th><th>公司</th><th>人数</th><th>对接人</th><th>电话</th><th>车辆</th><th>状态</th><th>操作</th></tr></thead><tbody id="bookingTableBody"></tbody></table>
+                <table><thead><tr><th>系统</th><th>提交时间</th><th>预约日期</th><th>时段</th><th>线路</th><th>泊车</th><th>公司</th><th>人数</th><th>对接人</th><th>电话</th><th>车辆</th><th>状态</th><th>操作</th></tr></thead><tbody id="bookingTableBody"></tbody></table>
             </div>
         </div>
     </main>
@@ -152,10 +157,11 @@
             ADMIN_PASSWORD: "admin123",
             DATE_RANGE: { start: "2026-04-24", end: "2026-04-30" },
             TIME_SLOTS: ["10:00-12:00", "14:00-16:00", "17:00-19:00"],
-            VEHICLE_COUNT: 6
+            VEHICLE_COUNTS: { astra: 6, luna: 2 }
         };
         let allBookings = [];
         let currentFilter = "all";
+        let currentSystemFilter = "all";
         function showToast(msg, type) { const t = document.createElement("div"); t.className = "toast toast-" + type; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3000); }
         function formatDateTime(d) { if (!d) return "-"; const date = new Date(d); return (date.getMonth() + 1) + "/" + date.getDate() + " " + date.getHours().toString().padStart(2, "0") + ":" + date.getMinutes().toString().padStart(2, "0"); }
         function formatDate(d) { if (!d) return "-"; const date = new Date(d); return (date.getMonth() + 1) + "/" + date.getDate(); }
@@ -211,9 +217,10 @@
             document.getElementById("rejectedCount").textContent = allBookings.filter(b => b.status === "rejected").length;
         }
         function renderTable() {
-            const filtered = currentFilter === "all" ? allBookings : allBookings.filter(b => b.status === currentFilter);
+            let filtered = currentFilter === "all" ? allBookings : allBookings.filter(b => b.status === currentFilter);
+            filtered = currentSystemFilter === "all" ? filtered : filtered.filter(b => b.systemType === currentSystemFilter);
             const tbody = document.getElementById("bookingTableBody");
-            if (filtered.length === 0) { tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:2rem;color:var(--gray-500);">暂无数据</td></tr>'; return; }
+            if (filtered.length === 0) { tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:2rem;color:var(--gray-500);">暂无数据</td></tr>'; return; }
             tbody.innerHTML = filtered.map(b => {
                 let actionBtns = "";
                 if (b.status === "pending") {
@@ -221,10 +228,22 @@
                 } else if (b.status === "approved") {
                     actionBtns = "<div class='action-btns'><button class='btn btn-outline btn-sm' onclick='openVehicleModal(\"" + b.id + "\")'>调车</button> <button class='btn btn-warning btn-sm' onclick='withdrawBooking(\"" + b.id + "\")'>撤回</button></div>";
                 }
-                return "<tr><td>" + formatDateTime(b.createdAt) + "</td><td>" + formatDate(b.bookingDate) + "</td><td>" + b.timeSlot + "</td><td>" + (b.demoRoute || "-") + "</td><td>" + (b.parkingDemo || "-") + "</td><td>" + b.companyName + "</td><td>" + b.passengerCount + "人</td><td>" + b.contactName + "</td><td>" + b.contactPhone + "</td><td>" + (b.vehicleId || "-") + "</td><td><span class='status-badge status-" + b.status + "'>" + getStatusText(b.status) + "</span></td><td>" + actionBtns + "</td></tr>";
+                const systemLabel = b.systemType === "luna" ? "<span style='background:#8b5cf6;color:white;padding:0.125rem 0.5rem;border-radius:0.25rem;font-size:0.75rem;'>Luna</span>" : "<span style='background:#2563eb;color:white;padding:0.125rem 0.5rem;border-radius:0.25rem;font-size:0.75rem;'>Astra</span>";
+                return "<tr><td>" + systemLabel + "</td><td>" + formatDateTime(b.createdAt) + "</td><td>" + formatDate(b.bookingDate) + "</td><td>" + b.timeSlot + "</td><td>" + (b.demoRoute || "-") + "</td><td>" + (b.parkingDemo || "-") + "</td><td>" + b.companyName + "</td><td>" + b.passengerCount + "人</td><td>" + b.contactName + "</td><td>" + b.contactPhone + "</td><td>" + (b.vehicleId || "-") + "</td><td><span class='status-badge status-" + b.status + "'>" + getStatusText(b.status) + "</span></td><td>" + actionBtns + "</td></tr>";
             }).join("");
         }
-        document.querySelectorAll(".filter-btn").forEach(btn => btn.addEventListener("click", () => { document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active")); btn.classList.add("active"); currentFilter = btn.dataset.filter; renderTable(); }));
+        document.querySelectorAll("[data-filter]").forEach(btn => btn.addEventListener("click", () => {
+            document.querySelectorAll("[data-filter]").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            currentFilter = btn.dataset.filter;
+            renderTable();
+        }));
+        document.querySelectorAll("[data-system]").forEach(btn => btn.addEventListener("click", () => {
+            document.querySelectorAll("[data-system]").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            currentSystemFilter = btn.dataset.system;
+            renderTable();
+        }));
 
         function openApprovalModal(id, action) {
             const b = allBookings.find(x => x.id === id);

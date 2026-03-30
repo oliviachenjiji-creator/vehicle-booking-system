@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>车辆预约系统 - 智驾新程</title>
+    <title>Luna预约系统 - 智驾新程</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f9fafb; color: #1f2937; line-height: 1.6; min-height: 100vh; }
@@ -54,18 +54,17 @@
 <body>
     <header class="header">
         <div class="header-content">
-            <div class="logo">智驾新程 - 车辆预约系统</div>
+            <div class="logo">智驾新程 - Luna预约系统</div>
             <nav class="nav-links">
-                <a href="index.html" class="active">预约申请</a>
-                <a href="user.html">我的预约</a>
-                <a href="schedule.html">排班日历</a>
-                <a href="admin.html">管理后台</a>
+                <a href="luna-index.html" class="active">预约申请</a>
+                <a href="luna-user.html">我的预约</a>
+                <a href="luna-schedule.html">排班日历</a>
             </nav>
         </div>
     </header>
     <main class="container">
         <div class="form-card">
-            <h1 class="form-title">Astra Demo预约申请</h1>
+            <h1 class="form-title">Luna Demo预约申请</h1>
             <div class="locked-info hidden" id="lockedInfo"></div>
             <form id="bookingForm">
                 <div class="form-group">
@@ -120,19 +119,19 @@
                 </div>
                 <button type="submit" class="btn btn-primary btn-full" id="submitBtn">提交预约申请</button>
             </form>
-            <p style="text-align:center;margin-top:1.5rem;color:var(--gray-500);">查看<a href="schedule.html" style="color:var(--primary);">排班日历</a>了解各时段预约情况</p>
+            <p style="text-align:center;margin-top:1.5rem;color:var(--gray-500);">查看<a href="luna-schedule.html" style="color:var(--primary);">排班日历</a>了解各时段预约情况</p>
         </div>
     </main>
     <script>
         var CONFIG = {
             API_URL: "https://script.google.com/macros/s/AKfycbyyLi44_nTE5AlDf4hfOAileeMoIyn-Jyz7aDf5UjsRMM8nA71b9XiSFDqXgZ9uIF46/exec",
-            SYSTEM_TYPE: "astra",
+            SYSTEM_TYPE: "luna",
             DATE_RANGE: { start: "2026-04-24", end: "2026-04-30" },
             TIME_SLOTS: [{ value: "10:00-12:00", label: "10:00 - 12:00" }, { value: "14:00-16:00", label: "14:00 - 16:00" }, { value: "17:00-19:00", label: "17:00 - 19:00" }],
-            DEMO_ROUTES: [{ value: "线路1-顺义市区40mins内", label: "线路1-顺义市区40mins内" }, { value: "线路2-望京市区1h30mins内", label: "线路2-望京市区1h30mins内" }, { value: "自由泛化", label: "自由泛化" }],
+            DEMO_ROUTES: [{ value: "线路1-顺义市区40mins内", label: "线路1-顺义市区40mins内" }, { value: "线路2-望京市区1h30mins内", label: "线路2-望京市区1h30mins内" }],
             PARKING_OPTIONS: [{ value: "有", label: "有" }, { value: "无", label: "无" }],
             LANGUAGES: [{ value: "中文", label: "中文" }, { value: "英文", label: "英文" }],
-            VEHICLE_COUNT: 6
+            VEHICLE_COUNT: 2
         };
 
         var lockedDate = null;
