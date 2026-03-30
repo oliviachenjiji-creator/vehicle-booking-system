@@ -56,8 +56,19 @@ const CONFIG = {
     '更新时间': 'fldvhLrOeW'
   },
 
-  // 车辆数量
-  VEHICLE_COUNT: 6
+  // 按系统区分车辆配置
+  SYSTEMS: {
+    astra: {
+      VEHICLE_COUNT: 6,
+      VEHICLE_PREFIX: 'Astra车辆',
+      BACKUP_COUNT: 2  // 备用车数量
+    },
+    luna: {
+      VEHICLE_COUNT: 2,
+      VEHICLE_PREFIX: 'Luna车辆',
+      BACKUP_COUNT: 1  // 备用车数量
+    }
+  },
 
   // 预约日期范围
   DATE_RANGE: {
@@ -92,10 +103,10 @@ function doGet(e) {
   try {
     switch (action) {
       case 'getSchedule':
-        result = getSchedule(e.parameter.start, e.parameter.end);
+        result = getSchedule(e.parameter.start, e.parameter.end, e.parameter.systemType);
         break;
       case 'getUserBookings':
-        result = getUserBookings(e.parameter.phone);
+        result = getUserBookings(e.parameter.phone, e.parameter.systemType);
         break;
       case 'getBookingDetail':
         result = getBookingDetail(e.parameter.id);
@@ -432,7 +443,7 @@ function getBookingSheet() {
   if (!sheet) {
     sheet = ss.insertSheet(CONFIG.SHEETS.BOOKINGS);
     const headers = [
-      'ID', '创建时间', '预约日期', '时段', 'Demo线路',
+      'ID', '系统类型', '创建时间', '预约日期', '时段', 'Demo线路',
       '客户公司名称', '上车人数', '车辆语言', '对接人姓名',
       '对接人电话', '备注', '状态', '车辆ID', '拒绝原因', '更新时间', '飞书记录ID', '泊车Demo体验'
     ];
@@ -460,29 +471,30 @@ function getAllBookings() {
     const row = data[i];
     if (row[0]) {
       // 标准化日期格式
-      let bookingDate = row[2];
+      let bookingDate = row[3];
       if (bookingDate instanceof Date) {
         bookingDate = Utilities.formatDate(bookingDate, Session.getScriptTimeZone(), 'yyyy-MM-dd');
       }
 
       bookings.push({
         id: row[0],
-        createdAt: row[1],
+        systemType: row[1] || 'astra',
+        createdAt: row[2],
         bookingDate: bookingDate,
-        timeSlot: row[3],
-        demoRoute: row[4],
-        companyName: row[5],
-        passengerCount: row[6],
-        vehicleLanguage: row[7],
-        contactName: row[8],
-        contactPhone: row[9],
-        remarks: row[10],
-        status: row[11],
-        vehicleId: row[12],
-        rejectReason: row[13],
-        updatedAt: row[14],
-        feishuRecordId: row[15],
-        parkingDemo: row[16] || '无'
+        timeSlot: row[4],
+        demoRoute: row[5],
+        companyName: row[6],
+        passengerCount: row[7],
+        vehicleLanguage: row[8],
+        contactName: row[9],
+        contactPhone: row[10],
+        remarks: row[11],
+        status: row[12],
+        vehicleId: row[13],
+        rejectReason: row[14],
+        updatedAt: row[15],
+        feishuRecordId: row[16],
+        parkingDemo: row[17] || '无'
       });
     }
   }
@@ -495,6 +507,10 @@ function getAllBookings() {
  */
 function createBooking(bookingData) {
   const sheet = getBookingSheet();
+
+  // 获取系统类型，默认为astra
+  const systemType = bookingData.systemType || 'astra';
+  const systemConfig = CONFIG.SYSTEMS[systemType] || CONFIG.SYSTEMS.astra;
 
   // 验证必填字段
   const requiredFields = ['bookingDate', 'timeSlot', 'demoRoute', 'parkingDemo', 'companyName',
@@ -514,8 +530,8 @@ function createBooking(bookingData) {
     return { success: false, message: '预约日期不在有效范围内' };
   }
 
-  // 检查时段是否已满
-  const capacityCheck = checkTimeSlotCapacity(bookingData.bookingDate, bookingData.timeSlot);
+  // 检查时段是否已满（按系统类型检查）
+  const capacityCheck = checkTimeSlotCapacity(bookingData.bookingDate, bookingData.timeSlot, systemType);
   if (!capacityCheck.available) {
     return { success: false, message: '该时段已约满，请选择其他时段' };
   }
@@ -526,9 +542,9 @@ function createBooking(bookingData) {
 
   const now = new Date();
 
-  // 写入Google Sheets (包含parkingDemo字段)
+  // 写入Google Sheets (包含systemType和parkingDemo字段)
   const newRow = [
-    id, now, bookingData.bookingDate, bookingData.timeSlot, bookingData.demoRoute,
+    id, systemType, now, bookingData.bookingDate, bookingData.timeSlot, bookingData.demoRoute,
     bookingData.companyName, bookingData.passengerCount, bookingData.vehicleLanguage,
     bookingData.contactName, bookingData.contactPhone, bookingData.remarks || '',
     'pending', '', '', now, '', bookingData.parkingDemo || '无'
@@ -540,6 +556,7 @@ function createBooking(bookingData) {
   const fullBookingData = {
     ...bookingData,
     id: id,
+    systemType: systemType,
     status: 'pending',
     createdAt: now
   };
@@ -565,36 +582,45 @@ function syncToFeishuBackground(bookingData) {
 /**
  * 检查时段容量
  */
-function checkTimeSlotCapacity(date, timeSlot) {
+function checkTimeSlotCapacity(date, timeSlot, systemType) {
+  systemType = systemType || 'astra';
+  const systemConfig = CONFIG.SYSTEMS[systemType] || CONFIG.SYSTEMS.astra;
+
   const result = getAllBookings();
   const bookings = result.data;
 
   const count = bookings.filter(b =>
     b.bookingDate === date &&
     b.timeSlot === timeSlot &&
+    b.systemType === systemType &&
     (b.status === 'approved' || b.status === 'pending')
   ).length;
 
   return {
-    available: count < CONFIG.VEHICLE_COUNT,
-    remaining: CONFIG.VEHICLE_COUNT - count
+    available: count < systemConfig.VEHICLE_COUNT,
+    remaining: systemConfig.VEHICLE_COUNT - count
   };
 }
 
 /**
  * 获取用户预约
  */
-function getUserBookings(phone) {
+function getUserBookings(phone, systemType) {
   const result = getAllBookings();
   // 标准化手机号格式进行比较
   const normalizedPhone = String(phone).trim();
-  const bookings = result.data.filter(b => {
+  let bookings = result.data.filter(b => {
     const bookingPhone = String(b.contactPhone || '').trim();
     // 支持多种格式匹配：纯数字、带+86前缀等
     return bookingPhone === normalizedPhone ||
            bookingPhone === '+86' + normalizedPhone ||
            bookingPhone.replace('+86', '') === normalizedPhone;
   });
+
+  // 如果指定了系统类型，按系统类型筛选
+  if (systemType) {
+    bookings = bookings.filter(b => b.systemType === systemType);
+  }
 
   return {
     success: true,
@@ -630,17 +656,17 @@ function updateBooking(bookingId, updateData) {
     if (data[i][0] === bookingId) {
       rowIndex = i + 1;
       currentBooking = {
-        status: data[i][11],
-        bookingDate: data[i][2],
-        timeSlot: data[i][3],
-        demoRoute: data[i][4],
-        companyName: data[i][5],
-        passengerCount: data[i][6],
-        vehicleLanguage: data[i][7],
-        contactName: data[i][8],
-        contactPhone: data[i][9],
-        remarks: data[i][10],
-        feishuRecordId: data[i][15]
+        status: data[i][12],
+        bookingDate: data[i][3],
+        timeSlot: data[i][4],
+        demoRoute: data[i][5],
+        companyName: data[i][6],
+        passengerCount: data[i][7],
+        vehicleLanguage: data[i][8],
+        contactName: data[i][9],
+        contactPhone: data[i][10],
+        remarks: data[i][11],
+        feishuRecordId: data[i][16]
       };
       break;
     }
@@ -667,8 +693,8 @@ function updateBooking(bookingId, updateData) {
   }
 
   const colMap = {
-    bookingDate: 3, timeSlot: 4, demoRoute: 5, companyName: 6,
-    passengerCount: 7, vehicleLanguage: 8, remarks: 11
+    bookingDate: 4, timeSlot: 5, demoRoute: 6, companyName: 7,
+    passengerCount: 8, vehicleLanguage: 9, remarks: 12
   };
 
   for (const [key, col] of Object.entries(colMap)) {
@@ -678,7 +704,7 @@ function updateBooking(bookingId, updateData) {
   }
 
   const now = new Date();
-  sheet.getRange(rowIndex, 15).setValue(now);
+  sheet.getRange(rowIndex, 16).setValue(now);
 
   // 同步到飞书
   const updatedBooking = { ...currentBooking, ...updateData, updatedAt: now, id: bookingId };
@@ -700,8 +726,8 @@ function cancelBooking(bookingId) {
   for (let i = 1; i < data.length; i++) {
     if (data[i][0] === bookingId) {
       rowIndex = i + 1;
-      feishuRecordId = data[i][15];
-      if (data[i][11] !== 'pending') {
+      feishuRecordId = data[i][16];
+      if (data[i][12] !== 'pending') {
         return { success: false, message: '只能取消待审批的预约' };
       }
       break;
@@ -712,9 +738,9 @@ function cancelBooking(bookingId) {
     return { success: false, message: '预约不存在' };
   }
 
-  sheet.getRange(rowIndex, 12).setValue('cancelled');
-  sheet.getRange(rowIndex, 15).setValue(new Date());
-  sheet.getRange(rowIndex, 13).setValue('');
+  sheet.getRange(rowIndex, 13).setValue('cancelled');
+  sheet.getRange(rowIndex, 16).setValue(new Date());
+  sheet.getRange(rowIndex, 14).setValue('');
 
   // 同步到飞书
   syncToFeishu({ id: bookingId, status: 'cancelled', updatedAt: new Date() }, feishuRecordId);
@@ -736,10 +762,11 @@ function approveBooking(bookingId, status, rejectReason) {
     if (data[i][0] === bookingId) {
       rowIndex = i + 1;
       currentBooking = {
-        bookingDate: data[i][2],
-        timeSlot: data[i][3],
-        status: data[i][11],
-        feishuRecordId: data[i][15]
+        systemType: data[i][1] || 'astra',
+        bookingDate: data[i][3],
+        timeSlot: data[i][4],
+        status: data[i][12],
+        feishuRecordId: data[i][16]
       };
       break;
     }
@@ -755,16 +782,16 @@ function approveBooking(bookingId, status, rejectReason) {
 
   const now = new Date();
 
-  sheet.getRange(rowIndex, 12).setValue(status);
-  sheet.getRange(rowIndex, 15).setValue(now);
+  sheet.getRange(rowIndex, 13).setValue(status);
+  sheet.getRange(rowIndex, 16).setValue(now);
 
   let vehicleId = '';
 
   if (status === 'rejected') {
-    sheet.getRange(rowIndex, 14).setValue(rejectReason);
+    sheet.getRange(rowIndex, 15).setValue(rejectReason);
   } else if (status === 'approved') {
-    vehicleId = assignVehicle(currentBooking.bookingDate, currentBooking.timeSlot);
-    sheet.getRange(rowIndex, 13).setValue(vehicleId || '待分配');
+    vehicleId = assignVehicle(currentBooking.bookingDate, currentBooking.timeSlot, currentBooking.systemType);
+    sheet.getRange(rowIndex, 14).setValue(vehicleId || '待分配');
   }
 
   // 同步到飞书
@@ -786,7 +813,10 @@ function approveBooking(bookingId, status, rejectReason) {
 /**
  * 自动排班：分配车辆
  */
-function assignVehicle(date, timeSlot) {
+function assignVehicle(date, timeSlot, systemType) {
+  systemType = systemType || 'astra';
+  const systemConfig = CONFIG.SYSTEMS[systemType] || CONFIG.SYSTEMS.astra;
+
   // 标准化日期格式
   let targetDate;
   if (date instanceof Date) {
@@ -810,15 +840,25 @@ function assignVehicle(date, timeSlot) {
 
     if (bookingDateStr === targetDate &&
         b.timeSlot === timeSlot &&
+        b.systemType === systemType &&
         b.status === 'approved' &&
         b.vehicleId) {
       occupiedVehicles.add(b.vehicleId);
     }
   });
 
-  // 分配车辆
-  for (let i = 1; i <= CONFIG.VEHICLE_COUNT; i++) {
-    const vehicleId = '车辆' + i;
+  // 分配车辆（使用系统特定前缀）
+  for (let i = 1; i <= systemConfig.VEHICLE_COUNT; i++) {
+    const vehicleId = systemConfig.VEHICLE_PREFIX + i;
+    if (!occupiedVehicles.has(vehicleId)) {
+      return vehicleId;
+    }
+  }
+
+  // 如果主车辆都满了，尝试使用备用车
+  const totalVehicles = systemConfig.VEHICLE_COUNT + systemConfig.BACKUP_COUNT;
+  for (let i = systemConfig.VEHICLE_COUNT + 1; i <= totalVehicles; i++) {
+    const vehicleId = systemConfig.VEHICLE_PREFIX + i + '(备)';
     if (!occupiedVehicles.has(vehicleId)) {
       return vehicleId;
     }
@@ -830,11 +870,16 @@ function assignVehicle(date, timeSlot) {
 /**
  * 获取排班数据
  */
-function getSchedule(startDate, endDate) {
+function getSchedule(startDate, endDate, systemType) {
   const result = getAllBookings();
-  const bookings = result.data.filter(b =>
+  let bookings = result.data.filter(b =>
     b.status === 'approved' || b.status === 'pending'
   );
+
+  // 如果指定了系统类型，按系统类型筛选
+  if (systemType) {
+    bookings = bookings.filter(b => b.systemType === systemType);
+  }
 
   return { success: true, data: bookings };
 }
@@ -853,8 +898,8 @@ function withdrawBooking(bookingId) {
     if (data[i][0] === bookingId) {
       rowIndex = i + 1;
       currentBooking = {
-        status: data[i][11],
-        vehicleId: data[i][12]
+        status: data[i][12],
+        vehicleId: data[i][14]
       };
       break;
     }
@@ -871,9 +916,9 @@ function withdrawBooking(bookingId) {
   const now = new Date();
 
   // 恢复为待审批状态，清空车辆分配
-  sheet.getRange(rowIndex, 12).setValue('pending');
-  sheet.getRange(rowIndex, 13).setValue('');
-  sheet.getRange(rowIndex, 15).setValue(now);
+  sheet.getRange(rowIndex, 13).setValue('pending');
+  sheet.getRange(rowIndex, 14).setValue('');
+  sheet.getRange(rowIndex, 16).setValue(now);
 
   return { success: true, message: '已撤回审批' };
 }
@@ -901,8 +946,8 @@ function updateVehicle(bookingId, vehicleId) {
   const now = new Date();
 
   // 更新车辆
-  sheet.getRange(rowIndex, 13).setValue(vehicleId);
-  sheet.getRange(rowIndex, 15).setValue(now);
+  sheet.getRange(rowIndex, 14).setValue(vehicleId);
+  sheet.getRange(rowIndex, 16).setValue(now);
 
   return { success: true, message: '车辆已更新', vehicleId: vehicleId };
 }
@@ -920,7 +965,7 @@ function initializeSheets() {
   if (!bookingSheet) {
     bookingSheet = ss.insertSheet(CONFIG.SHEETS.BOOKINGS);
     const headers = [
-      'ID', '创建时间', '预约日期', '时段', 'Demo线路',
+      'ID', '系统类型', '创建时间', '预约日期', '时段', 'Demo线路',
       '客户公司名称', '上车人数', '车辆语言', '对接人姓名',
       '对接人电话', '备注', '状态', '车辆ID', '拒绝原因', '更新时间', '飞书记录ID', '泊车Demo体验'
     ];
@@ -928,18 +973,45 @@ function initializeSheets() {
     bookingSheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#f3f4f6');
     bookingSheet.setFrozenRows(1);
     bookingSheet.setColumnWidth(1, 120);
-    bookingSheet.setColumnWidth(3, 100);
-    bookingSheet.setColumnWidth(6, 150);
-    bookingSheet.setColumnWidth(10, 120);
+    bookingSheet.setColumnWidth(2, 80);
+    bookingSheet.setColumnWidth(4, 100);
+    bookingSheet.setColumnWidth(7, 150);
+    bookingSheet.setColumnWidth(11, 120);
+  } else {
+    // 检查是否需要添加"系统类型"列（兼容旧数据）
+    const headers = bookingSheet.getRange(1, 1, 1, bookingSheet.getLastColumn()).getValues()[0];
+    if (headers[1] !== '系统类型') {
+      // 插入"系统类型"列
+      bookingSheet.insertColumns(2);
+      bookingSheet.getRange(1, 2).setValue('系统类型').setFontWeight('bold').setBackground('#f3f4f6');
+      // 为现有数据设置默认系统类型
+      const lastRow = bookingSheet.getLastRow();
+      if (lastRow > 1) {
+        bookingSheet.getRange(2, 2, lastRow - 1, 1).setValue('astra');
+      }
+    }
   }
 
-  // 创建车辆配置表
+  // 创建车辆配置表（按系统区分）
   let vehicleSheet = ss.getSheetByName(CONFIG.SHEETS.VEHICLES);
   if (!vehicleSheet) {
     vehicleSheet = ss.insertSheet(CONFIG.SHEETS.VEHICLES);
-    vehicleSheet.appendRow(['车辆ID', '车辆名称', '状态', '备注']);
-    for (let i = 1; i <= CONFIG.VEHICLE_COUNT; i++) {
-      vehicleSheet.appendRow([`车辆${i}`, `Demo车辆${i}`, '可用', '']);
+    vehicleSheet.appendRow(['车辆ID', '系统类型', '车辆名称', '状态', '备注']);
+
+    // Astra车辆
+    for (let i = 1; i <= CONFIG.SYSTEMS.astra.VEHICLE_COUNT; i++) {
+      vehicleSheet.appendRow([`Astra车辆${i}`, 'astra', `Astra Demo车辆${i}`, '可用', '']);
+    }
+    for (let i = 1; i <= CONFIG.SYSTEMS.astra.BACKUP_COUNT; i++) {
+      vehicleSheet.appendRow([`Astra车辆${CONFIG.SYSTEMS.astra.VEHICLE_COUNT + i}(备)`, 'astra', `Astra备用车辆${i}`, '备用', '']);
+    }
+
+    // Luna车辆
+    for (let i = 1; i <= CONFIG.SYSTEMS.luna.VEHICLE_COUNT; i++) {
+      vehicleSheet.appendRow([`Luna车辆${i}`, 'luna', `Luna Demo车辆${i}`, '可用', '']);
+    }
+    for (let i = 1; i <= CONFIG.SYSTEMS.luna.BACKUP_COUNT; i++) {
+      vehicleSheet.appendRow([`Luna车辆${CONFIG.SYSTEMS.luna.VEHICLE_COUNT + i}(备)`, 'luna', `Luna备用车辆${i}`, '备用', '']);
     }
   }
 
@@ -947,9 +1019,10 @@ function initializeSheets() {
   let routeSheet = ss.getSheetByName(CONFIG.SHEETS.ROUTES);
   if (!routeSheet) {
     routeSheet = ss.insertSheet(CONFIG.SHEETS.ROUTES);
-    routeSheet.appendRow(['线路ID', '线路名称', '描述', '状态']);
-    routeSheet.appendRow(['顺义短线路1', '顺义短线路1', '顺义短途测试线路1', '启用']);
-    routeSheet.appendRow(['顺义短线路2', '顺义短线路2', '顺义短途测试线路2', '启用']);
+    routeSheet.appendRow(['线路ID', '系统类型', '线路名称', '描述', '状态']);
+    routeSheet.appendRow(['线路1-顺义市区40mins内', 'both', '线路1-顺义市区40mins内', '顺义短途测试线路', '启用']);
+    routeSheet.appendRow(['线路2-望京市区1h30mins内', 'both', '线路2-望京市区1h30mins内', '望京长途测试线路', '启用']);
+    routeSheet.appendRow(['自由泛化', 'astra', '自由泛化', '自由路线测试', '启用']);
   }
 
   console.log('初始化完成！');
