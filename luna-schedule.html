@@ -196,12 +196,16 @@
             var timeFilter = document.getElementById("timeFilter").value;
             var slots = timeFilter === "all" ? CONFIG.TIME_SLOTS : CONFIG.TIME_SLOTS.filter(function(s) { return s.value === timeFilter; });
 
-            var map = {};
+            // 构建预约映射：按日期时段分组
+            var slotMap = {};
             allBookings.forEach(function(b) {
                 var dateStr = normalizeDate(b.bookingDate);
-                var key = dateStr + "_" + b.timeSlot + "_" + b.vehicleId;
+                var slotKey = dateStr + "_" + b.timeSlot;
+                if (!slotMap[slotKey]) {
+                    slotMap[slotKey] = [];
+                }
                 if (b.vehicleId) {
-                    map[key] = b;
+                    slotMap[slotKey].push(b);
                 }
             });
 
@@ -211,15 +215,29 @@
             slots.forEach(function(slot) {
                 body += "<tr><th>" + slot.label + "</th>";
                 dates.forEach(function(date) {
+                    var slotKey = date.value + "_" + slot.value;
+                    var bookings = slotMap[slotKey] || [];
+
+                    // 提取车辆编号，兼容新旧格式
                     var items = [];
-                    for (var v = 1; v <= CONFIG.VEHICLE_COUNT; v++) {
-                        var vehicleId = "Luna车辆" + v;
-                        var key = date.value + "_" + slot.value + "_" + vehicleId;
-                        var b = map[key];
-                        if (b) {
-                            items.push({ vehicle: v, booking: b });
+                    bookings.forEach(function(b) {
+                        var vehicleNum = 0;
+                        // 新格式: Luna车辆1
+                        var newMatch = b.vehicleId.match(/Luna车辆(\d+)/);
+                        // 旧格式: 车辆1
+                        var oldMatch = b.vehicleId.match(/^车辆(\d+)$/);
+                        if (newMatch) {
+                            vehicleNum = parseInt(newMatch[1]);
+                        } else if (oldMatch) {
+                            vehicleNum = parseInt(oldMatch[1]);
                         }
-                    }
+                        if (vehicleNum > 0) {
+                            items.push({ vehicle: vehicleNum, booking: b });
+                        }
+                    });
+
+                    // 按车辆编号排序
+                    items.sort(function(a, b) { return a.vehicle - b.vehicle; });
 
                     var avail = CONFIG.VEHICLE_COUNT - items.length;
 

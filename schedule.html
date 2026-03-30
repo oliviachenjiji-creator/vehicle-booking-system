@@ -186,13 +186,17 @@
             const timeFilter = document.getElementById("timeFilter").value;
             const slots = timeFilter === "all" ? CONFIG.TIME_SLOTS : CONFIG.TIME_SLOTS.filter(s => s.value === timeFilter);
 
-            // 构建预约映射：key = "日期_时段_车辆ID"
-            const map = {};
+            // 构建预约映射：key = "日期_时段"
+            // 同一日期时段可能有多条预约
+            const slotMap = {};
             allBookings.forEach(b => {
                 const dateStr = normalizeDate(b.bookingDate);
-                const key = dateStr + "_" + b.timeSlot + "_" + b.vehicleId;
+                const slotKey = dateStr + "_" + b.timeSlot;
+                if (!slotMap[slotKey]) {
+                    slotMap[slotKey] = [];
+                }
                 if (b.vehicleId) {
-                    map[key] = b;
+                    slotMap[slotKey].push(b);
                 }
             });
 
@@ -202,37 +206,45 @@
             slots.forEach(slot => {
                 body += "<tr><th>" + slot.label + "</th>";
                 dates.forEach(date => {
-                    // 收集该日期时段的所有预约
-                    let items = [];
-                    for (let v = 1; v <= CONFIG.VEHICLE_COUNT; v++) {
-                        const vehicleId = "Astra车辆" + v;
-                        const key = date.value + "_" + slot.value + "_" + vehicleId;
-                        const b = map[key];
-                        if (b) {
-                            items.push({ vehicle: v, booking: b });
+                    const slotKey = date.value + "_" + slot.value;
+                    const bookings = slotMap[slotKey] || [];
+
+                    // 提取车辆编号，兼容新旧格式
+                    const items = [];
+                    bookings.forEach(b => {
+                        let vehicleNum = 0;
+                        // 新格式: Astra车辆1, Luna车辆1
+                        const newMatch = b.vehicleId.match(/(?:Astra|Luna)车辆(\d+)/);
+                        // 旧格式: 车辆1
+                        const oldMatch = b.vehicleId.match(/^车辆(\d+)$/);
+                        if (newMatch) {
+                            vehicleNum = parseInt(newMatch[1]);
+                        } else if (oldMatch) {
+                            vehicleNum = parseInt(oldMatch[1]);
                         }
-                    }
+                        if (vehicleNum > 0) {
+                            items.push({ vehicle: vehicleNum, booking: b });
+                        }
+                    });
+
+                    // 按车辆编号排序
+                    items.sort((a, b) => a.vehicle - b.vehicle);
 
                     const avail = CONFIG.VEHICLE_COUNT - items.length;
 
                     if (items.length === 0) {
-                        // 全部空闲
                         body += "<td class='slot-available' onclick=\"goToBooking('" + date.value + "', '" + slot.value + "')\"><span style='font-weight:500;'>空闲</span><br><span style='font-size:0.7rem;'>" + avail + "辆车可预约</span></td>";
                     } else if (avail === 0) {
-                        // 约满，红色背景
                         let html = "";
                         items.forEach(s => {
                             if (s.booking.status === "approved") {
-                                // 已审批：蓝色背景，格式：车辆X·对接人·公司·人数
                                 html += "<div class='slot-item slot-item-approved' style='background:#3b82f6;color:white;'><div style='font-weight:500;'>车辆" + s.vehicle + "·" + s.booking.contactName + "·" + s.booking.companyName + "·" + s.booking.passengerCount + "人</div></div>";
                             } else {
-                                // 待审批
                                 html += "<div class='slot-item slot-item-pending'><div style='font-weight:500;'>车辆" + s.vehicle + " · 待审批</div><div>" + s.booking.contactName + "，" + s.booking.passengerCount + "人，" + s.booking.companyName + "</div></div>";
                             }
                         });
                         body += "<td class='slot-full'>" + html + "</td>";
                     } else if (avail <= 3) {
-                        // 还剩3辆或更少，黄色背景，可点击
                         let html = "";
                         items.forEach(s => {
                             if (s.booking.status === "approved") {
@@ -244,7 +256,6 @@
                         html += "<div class='slot-item' style='background:rgba(245,158,11,0.2);color:#92400e;'><div style='font-size:0.7rem;'>仅剩" + avail + "辆车</div></div>";
                         body += "<td class='slot-warning' onclick=\"goToBooking('" + date.value + "', '" + slot.value + "')\">" + html + "</td>";
                     } else {
-                        // 正常情况，绿色背景，可点击
                         let html = "";
                         items.forEach(s => {
                             if (s.booking.status === "approved") {
