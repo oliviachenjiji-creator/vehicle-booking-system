@@ -1062,3 +1062,43 @@ function syncAllToFeishu() {
 
   console.log(`同步完成: 成功 ${successCount} 条，失败 ${failCount} 条`);
 }
+
+/**
+ * 强制更新车辆配置表
+ * 用于已有旧配置时更新到新配置
+ */
+function updateVehicleConfig() {
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  let vehicleSheet = ss.getSheetByName(CONFIG.SHEETS.VEHICLES);
+
+  // 如果存在，先删除
+  if (vehicleSheet) {
+    ss.deleteSheet(vehicleSheet);
+    console.log('已删除旧的车辆配置表');
+  }
+
+  // 创建新的车辆配置表
+  vehicleSheet = ss.insertSheet(CONFIG.SHEETS.VEHICLES);
+  vehicleSheet.appendRow(['车辆ID', '系统类型', '车辆名称', '状态', '备注']);
+  vehicleSheet.getRange(1, 1, 1, 5).setFontWeight('bold').setBackground('#f3f4f6');
+
+  // Astra车辆
+  for (let i = 1; i <= CONFIG.SYSTEMS.astra.VEHICLE_COUNT; i++) {
+    vehicleSheet.appendRow([`Astra车辆${i}`, 'astra', `Astra Demo车辆${i}`, '可用', '']);
+  }
+  for (let i = 1; i <= CONFIG.SYSTEMS.astra.BACKUP_COUNT; i++) {
+    vehicleSheet.appendRow([`Astra车辆${CONFIG.SYSTEMS.astra.VEHICLE_COUNT + i}(备)`, 'astra', `Astra备用车辆${i}`, '备用', '']);
+  }
+
+  // Luna车辆
+  for (let i = 1; i <= CONFIG.SYSTEMS.luna.VEHICLE_COUNT; i++) {
+    vehicleSheet.appendRow([`Luna车辆${i}`, 'luna', `Luna Demo车辆${i}`, '可用', '']);
+  }
+  for (let i = 1; i <= CONFIG.SYSTEMS.luna.BACKUP_COUNT; i++) {
+    vehicleSheet.appendRow([`Luna车辆${CONFIG.SYSTEMS.luna.VEHICLE_COUNT + i}(备)`, 'luna', `Luna备用车辆${i}`, '备用', '']);
+  }
+
+  console.log('车辆配置表更新完成！');
+  console.log('Astra: ' + CONFIG.SYSTEMS.astra.VEHICLE_COUNT + '台主车 + ' + CONFIG.SYSTEMS.astra.BACKUP_COUNT + '台备用车');
+  console.log('Luna: ' + CONFIG.SYSTEMS.luna.VEHICLE_COUNT + '台主车 + ' + CONFIG.SYSTEMS.luna.BACKUP_COUNT + '台备用车');
+}
