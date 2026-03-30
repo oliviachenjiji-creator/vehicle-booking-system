@@ -157,7 +157,10 @@
             ADMIN_PASSWORD: "admin123",
             DATE_RANGE: { start: "2026-04-24", end: "2026-04-30" },
             TIME_SLOTS: ["10:00-12:00", "14:00-16:00", "17:00-19:00"],
-            VEHICLE_COUNTS: { astra: 6, luna: 2 }
+            SYSTEMS: {
+                astra: { VEHICLE_COUNT: 6, BACKUP_COUNT: 2, VEHICLE_PREFIX: "Astra车辆" },
+                luna: { VEHICLE_COUNT: 2, BACKUP_COUNT: 1, VEHICLE_PREFIX: "Luna车辆" }
+            }
         };
         let allBookings = [];
         let currentFilter = "all";
@@ -282,12 +285,24 @@
             const b = allBookings.find(x => x.id === id);
             if (!b) return;
             document.getElementById("vehicleBookingId").value = id;
-            document.getElementById("vehicleBookingDetail").innerHTML = "<div style='display:grid;gap:0.5rem;margin-bottom:1rem;'><div><strong>预约ID:</strong> " + b.id + "</div><div><strong>日期:</strong> " + formatDate(b.bookingDate) + "</div><div><strong>时段:</strong> " + b.timeSlot + "</div><div><strong>当前车辆:</strong> " + (b.vehicleId || "未分配") + "</div></div>";
 
-            // 生成车辆选项
+            // 获取系统类型和对应配置
+            const systemType = b.systemType || 'astra';
+            const systemConfig = CONFIG.SYSTEMS[systemType] || CONFIG.SYSTEMS.astra;
+
+            document.getElementById("vehicleBookingDetail").innerHTML = "<div style='display:grid;gap:0.5rem;margin-bottom:1rem;'><div><strong>系统:</strong> " + (systemType === 'luna' ? 'Luna' : 'Astra') + "</div><div><strong>预约ID:</strong> " + b.id + "</div><div><strong>日期:</strong> " + formatDate(b.bookingDate) + "</div><div><strong>时段:</strong> " + b.timeSlot + "</div><div><strong>当前车辆:</strong> " + (b.vehicleId || "未分配") + "</div></div>";
+
+            // 根据系统类型生成车辆选项
             let options = "<option value=''>-- 选择车辆 --</option>";
-            for (let i = 1; i <= CONFIG.VEHICLE_COUNT; i++) {
-                options += "<option value='车辆" + i + "'" + (b.vehicleId === "车辆" + i ? " selected" : "") + ">车辆" + i + "</option>";
+            // 主车辆
+            for (let i = 1; i <= systemConfig.VEHICLE_COUNT; i++) {
+                const vehicleId = systemConfig.VEHICLE_PREFIX + i;
+                options += "<option value='" + vehicleId + "'" + (b.vehicleId === vehicleId ? " selected" : "") + ">" + vehicleId + "</option>";
+            }
+            // 备用车辆
+            for (let i = 1; i <= systemConfig.BACKUP_COUNT; i++) {
+                const vehicleId = systemConfig.VEHICLE_PREFIX + (systemConfig.VEHICLE_COUNT + i) + "(备)";
+                options += "<option value='" + vehicleId + "'" + (b.vehicleId === vehicleId ? " selected" : "") + ">" + vehicleId + "</option>";
             }
             document.getElementById("vehicleSelect").innerHTML = options;
             document.getElementById("conflictWarning").classList.add("hidden");
@@ -309,9 +324,14 @@
                 bookingDateStr = b.bookingDate.split('T')[0];
             }
 
-            // 查找同日期同时段同车辆的已审批预约
+            // 获取系统类型
+            const systemType = b.systemType || 'astra';
+
+            // 查找同日期同时段同车辆同系统的已审批预约
             const conflict = allBookings.find(x => {
                 if (x.id === b.id || x.status !== "approved" || x.vehicleId !== newVehicle) return false;
+                // 只检查同系统的预约
+                if ((x.systemType || 'astra') !== systemType) return false;
                 let xDateStr = x.bookingDate;
                 if (x.bookingDate instanceof Date) {
                     xDateStr = x.bookingDate.toISOString().split('T')[0];
@@ -322,7 +342,7 @@
             });
 
             if (conflict) {
-                document.getElementById("conflictWarning").innerHTML = "⚠️ 冲突警告：该时段" + newVehicle + "已被 " + conflict.companyName + " 预约！";
+                document.getElementById("conflictWarning").innerHTML = "⚠️ 冲突警告：该时段 " + newVehicle + " 已被 " + conflict.companyName + " 预约！";
                 document.getElementById("conflictWarning").classList.remove("hidden");
             } else {
                 document.getElementById("conflictWarning").classList.add("hidden");
